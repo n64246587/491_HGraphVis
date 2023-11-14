@@ -1,0 +1,18 @@
+Proposed name: .vac
+
+Contents:
+Version Number(just an int, starting at 1)
+
+Boolean indicating if directed or undirected. d = directed. u = undirected
+Boolean indicating if weighted or unweighted. w = weighted or u = unweighted.
+
+(after this point lines starting with an 'n' represent a node and it's constructor data
+lines starting with an 'e' represent an edge)
+
+example node line: 
+n -l label -x xCoord -y yCoord -f fillColor -o outlineColor -lc labelColor -s nodeSize
+ - label is mandatory
+
+example weighted edge line:
+e -s sourceLabel -d destLabel -w weight -c color
+ - sourceLabel and destLabel are mandatory options
