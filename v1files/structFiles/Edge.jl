@@ -1,6 +1,8 @@
+include("Node.jl")
 mutable struct Edge
     sourceKey::Int64 #access the dictionary to figure out key from lebel.
     destKey::Int64 #
+    members::Vector{Node}
 
     weight::Float64
     color::String
@@ -8,7 +10,7 @@ mutable struct Edge
 end
 
 #Edge(weight=1., color="black", sourceKey=-1, destKey=-1) = Edge(weight, color, sourceKey, destKey)
-Edge(;sourceKey=-1, destKey=-1, weight=1., color="black", lineWidth=1.0) = Edge(sourceKey, destKey, weight, color, lineWidth)
+Edge(;members=Vector{Edge}(undef,1), weight=1., color="black", lineWidth=1.0) = Edge(members, weight, color, lineWidth)
 
 #takes in a vector of edges, and returns a vector of edges
 function createEdgeVectorFromVVI(edges::Vector{Vector{Int64}})
