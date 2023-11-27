@@ -1,28 +1,22 @@
 printstyled("Interactive Julia Hypergraph Visualizizer Starting.\nLoading Packages...\n",color=:green)
 
 include("./structs/Hypergraph.jl")
+include("./help.jl")
 
-debug = false
+debug = true
 G = Hypergraph()
 input = ""
 commands= String[]
 graphHistory = Hypergraph[]
 intendedExit = false
-const quitAliases = ["q","quit","exit","exit()","quit()"]
+
 showTicks = false
 showLabels = true
 
 
 
 
-quitHelp="Quit Help Not yet Impemented"
-function printHelp(commands::Vector{String} = String[])
-    if isempty(commands)
-        println(quitHelp)
-    elseif commands[1] in quitAliases
-        println(quitHelp)
-    end
-end
+
 
 function displayGraph()
     if (isnothing(G))
@@ -38,7 +32,7 @@ function programExited()
     if intendedExit
         printgreen("Program Exited Safely. Bye.")
     else
-        printred("Program Exited Unexpectedly.")
+        printred("Program Exited Unexpectedly, potentially via Keyboard Interrupt.")
     end
 end
 
@@ -62,32 +56,51 @@ function promptLoop()
             if commands[1] in quitAliases return 
             elseif commands[1] == "help" 
                 if commandParts <2 printHelp() else printHelp(commands[2:end]) end
-            elseif commands[1] == "add"
-                addNode(G, commands)
-                setGraphLimits(G)
-                displayGraph()
-            elseif commands[1] == "remove"
-            else printred("Unrecognized Command, Please Try Again or type Help\n")
+
+            elseif commands[1] in addAliases
+                if commands[2] == "node"
+                    if commands[5] == "edge" && commandParts == 6
+                        simpleAddNodetoEdge(G,commands[3],commands[6])
+                    elseif commandParts == 2 # add node
+                        nodetoadd = addNode(G, commands)
+                    elseif commands[3] != "" # add node somethhing
+                        nodetoadd = addNode(G, commands[3])
+                    else
+                        nodetoadd = addNode(G, commands)
+                    end
+                    
+                end
+                
+            elseif commands[1] in removeAliases
+                if commandParts !=3
+                    printred("No subject to remove. Please try help remove.")
+                elseif commands[2] == "node"
+                    removeNode(G,commands[3])
+                elseif commands[2] == "edge"
+                    removeEdge(G,commands[3])
+                end
+            
 
 
-
-            
-            
-            
-            
-            
+            else 
+                printred("$(join(commands," ")) is not a recognized Command.\nTry `help remove` for assistance.\n") 
+                continue
             end
            
-        display(makePlot(G))
+        setGraphLimits(G)
+        displayGraph()
 
         catch e
-            if debug rethrow(e) end
-            printred("Problem in promptLoop\n")
-            rethrow(e)
+            printred("Problem in promptLoop of input.jl\nPlease watch your syntax. Try `help` if you need.\n")
+            if debug 
+                printred("Rethrowing Error due to debug flag.\n")
+                rethrow(e)
+            end
         end
     end 
 
 end
+
 atexit(programExited)
 promptLoop() 
 intendedExit = true

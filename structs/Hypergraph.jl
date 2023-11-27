@@ -1,7 +1,10 @@
 include("./Edge.jl")
-using Plots, KrylovKit
+
+using Plots
+
 printred(s::String) = printstyled(s,color=:red)
 printgreen(s::String) = printstyled(s,color=:green)
+printyellow(s::String) = printstyled(s,color=:yellow)
 
 mutable struct Hypergraph
     edges::Vector{Edge}
@@ -20,22 +23,35 @@ mutable struct Hypergraph
     
 end
 
-# returns the index of a string in a vector. Returns -1 if not found
-function doesLabelExist(g::Hypergraph,label::String)
-    for node in g.nodes
-        if node.label == label return true end
-    end
+# returns the true if an edge with this label is found
+function doesEdgeLabelExist(g::Hypergraph,label::String)
+    for edge in g.edges if edge.label == label return true end end
+    return false
+end
+
+# returns the true if a node with this label is found
+function doesNodeLabelExist(g::Hypergraph,label::String)
+    for node in g.nodes if node.label == label return true end end
     return false
 end
 
 
-# returns the index of a string in a vector. Returns -1 if not found
+# returns the first index of a string in a vector. Returns -1 if not found
 function findIndex(lineArgs, substr)
     numArgs = length(lineArgs)
     for i in 1:numArgs
         if lineArgs[i] == substr return i end
     end
     return -1
+end
+
+function findAllIndex(lineArgs, substr)::Vector{Int64}
+    numArgs = length(lineArgs)
+    ret = Int64[]
+    for i in 1:numArgs
+        if lineArgs[i] == substr push!(ret,i) end
+    end
+    return ret
 end
 
 function setGraphLimits(g::Hypergraph)
@@ -144,10 +160,26 @@ function makePlot(g::Hypergraph, showTicks::Bool = false, showLabels::Bool = tru
         # plot!(graphPlot,[xy[u,1]; xy[v,1]], [xy[u,2]; xy[v,2]],color = currEdge.color, linewidth = currEdge.lineWidth)
         # midx = (xy[u,1] + xy[v,1]) / 2
         # midy = (xy[u,2] + xy[v,2]) / 2
+
+        # if length(edges[j]) == 2
+        #     u = edges[j][1]
+        #     v = edges[j][2]
+        #     plot!(f,[xy[u,1]; xy[v,1]], [xy[u,2]; xy[v,2]],color = :black,linewidth = lw)
+        # else
+        lw = 1.5
+        la = 1
+        lc = :black
+        ms = 10
+
+        color = :gray
+        #colorset = palette(:seaborn_colorblind)
+        alp = .05
+        ms = 1
+        H = hyperedgehull(currEdge)
+        plot!(graphPlot,VPolygon(H),alpha = alp,linewidth = lw, markerstrokewidth = ms, linecolor = color,linealpha = la)
+        #end
         
-        # if (g.weighted)
-        #     annotate!(graphPlot, midx, midy, text(currEdge.weight, plot_font, txtsize, color="black"))
-        # end
+
     end
     
     #Plot the xy circles and node labels
@@ -167,9 +199,22 @@ end
 """
 Adds a new Node object to the graph from the provided parameters
 """
-function addNode(g::Hypergraph, label::String, size=1, outlineColor="black", fillColor="white", labelColor="black", xCoord=0., yCoord=0.) 
+function addNode(g::Hypergraph, label::String, size=10, outlineColor="black", fillColor="white", labelColor="black", xCoord=0., yCoord=0.) 
     newNode = Node(label, size, outlineColor, fillColor, labelColor, xCoord, yCoord)
+    badNodeLabel = false
+    i = 0
+    while (newNode.label == "") || doesNodeLabelExist(g,newNode.label)
+        i = i+1 
+        newNode.label = string(i)
+        badNodeLabel = true
+    end
+
+    # Check if a node with the same label is already in the graph
+    if (badNodeLabel)
+        printyellow("Provided node label \"$label\" is empty or already exists in the graph. The node was given the label $(newNode.label)\n")
+    end
     push!(g.nodes, newNode)
+    return newNode
 end
 
 
@@ -186,7 +231,7 @@ function addNode(g::Hypergraph, commands::Vector{String})
     NodeLabel = newNode.label
     badNodeLabel = false
     i = 0
-    while (newNode.label == "") || doesLabelExist(g,newNode.label)
+    while (newNode.label == "") || doesNodeLabelExist(g,newNode.label)
         i = i+1 
         newNode.label = string(i)
         badNodeLabel = true
@@ -194,7 +239,164 @@ function addNode(g::Hypergraph, commands::Vector{String})
 
     # Check if a node with the same label is already in the graph
     if (badNodeLabel)
-        printred("Provided node label \"$NodeLabel\" is empty or already exists in the graph. The node was given the label $(newNode.label)\n")
+        printyellow("Provided node label \"$NodeLabel\" is empty or already exists in the graph. The node was given the label $(newNode.label)\n")
     end
     push!(g.nodes, newNode)
+    return newNode
+end
+
+function removeNode(g::Hypergraph, label::String)
+    # Iterate through all the nodes in the graph and modify appropriately
+    i = 1
+    deleteIndex = -1
+    for node in g.nodes
+            if node.label == label
+                deleteIndex = i
+                break
+            end
+            i+=1  
+    end
+    
+    if (deleteIndex == -1)
+        printred("A node with label $label was not found.\n")
+        return
+    else
+        deleteat!(g.nodes, i)
+    end
+
+
+    # Iterate through all of the edges in the graph and modify appropriately
+    deleteEdges = [] 
+    j = 1
+    for edge in g.edges
+
+        i = 1
+        deleteIndex = -1
+        
+        for node in edge.members
+            if node.label == label
+                deleteIndex = i
+                break
+            end
+            i+=1  
+        end
+        if (deleteIndex != -1) deleteat!(edge.members, i) end
+        if length(edge.members) == 0 pushfirst!(deleteEdges,j) end
+       j+=1
+    end
+
+    #delete all singleton edges
+    for edgeNo in deleteEdges
+        deleteat!(g.edges, edgeNo)
+    end
+
+end
+
+function addEdge(g::Hypergraph, label::String, mems = Node[],color = "black",linew = 1.0)
+    newEdge = Edge(label, mems, color,linew)
+    #check for duplicate labels
+    badEdgeLabel = false
+    i = 64
+    while (newEdge.label == "") || doesEdgeLabelExist(g,newEdge.label)
+        i = i+1 
+        newEdge.label = string(Char(i))
+        badEdgeLabel = true
+    end
+
+    # Check if a node with the same label is already in the graph
+    if (badEdgeLabel)
+        printyellow("Provided edge label \"$label\" is empty or already exists in the graph. The edge was given the label $(newEdge.label)\n")
+    end
+
+
+    push!(g.edges, newEdge)
+    return newEdge
+end
+
+function removeEdge(g::Hypergraph, label::String)
+    #Removes the first edge it finds with the appropriate label
+    #
+    i = 1
+    removeIndex = 0
+    for edge in g.edges
+        if edge.label == label
+            removeIndex = i
+            break
+        end
+        i+=1
+    end
+    if removeIndex != 0
+        deleteat!(g.edges, removeIndex)
+    else
+        printyellow("Provided edge label \"$label\"  does not exist in the graph. No edges deleted.\n")
+    end
+
+end
+
+# function addNodetoEdge(g::Hypergraph, commands::Vector{String})
+#     wordEdgeAt = findIndex(commands,"edge") #cannot possibly be -1, checked before calling function
+#     if 
+#     for node in g.nodes
+#         if node.label == nodeLabel
+#             push!(edge.members,node)
+#             return
+#         end
+#     end
+#     printyellow("No node with label $edgeLabel found in the graph\nMaking a new Node with label $edgeLabel\n")
+
+    
+#     for edge in g.edges
+#         if edge.label == edgeLabel
+#             push!(edge.members,node)
+#             return
+#         end
+#     end
+#     printyellow("No edge with label $edgeLabel found in the graph\nMaking a new Edge with label $edgeLabel\n")
+#     newEdge = parseEdge(commands[wordEdgeAt+1:end])
+#     badEdgeLabel = false
+#     i = 64
+#     while (newEdge.label == "") || doesEdgeLabelExist(g,newEdge.label)
+#         i = i+1 
+#         newEdge.label = string(Char(i))
+#         badEdgeLabel = true
+#     end
+
+#     # Check if a node with the same label is already in the graph
+#     if (badEdgeLabel)
+#         printyellow("Provided node label \"$label\" is empty or already exists in the graph. The node was given the label $(newNode.label)\n")
+#     end
+
+#     push!(g.edges,newEdge)
+
+
+# end
+
+function simpleAddNodetoEdge(g::Hypergraph,nodeLabel::String,edgeLabel::String)
+
+    #check if node and edge exist
+    #if either doesn't exist, then create it
+
+    #does the node exist
+    nodeIndex = 0
+    for nodeNum in 1:length(g.nodes)
+        if g.nodes[nodeNum].label == nodeLabel
+            nodeIndex = nodeNum
+            break
+        end
+    end
+    if nodeIndex == 0
+        printyellow("No node with label $nodeLabel found in the graph\nMaking a new Node with label $nodeLabel\n")
+        nodeIndex = length(g.nodes)+1
+        addNode(g,nodeLabel)
+        nodeLabel = g.nodes[nodeIndex].label
+    end
+
+    for edge in g.edges
+        if edge.label == edgeLabel
+            push(edge.members, g.nodes[nodeIndex])
+            return
+        end
+    end
+    addEdge(g,edgeLabel)
+    push!(g.edges[end].members, g.nodes[nodeIndex])
 end
