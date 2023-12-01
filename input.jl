@@ -3,7 +3,7 @@ printstyled("Interactive Julia Hypergraph Visualizizer Starting.\nLoading Packag
 include("./structs/Hypergraph.jl")
 include("./help.jl")
 
-debug = true
+debug = false
 G = Hypergraph()
 input = ""
 commands= String[]
