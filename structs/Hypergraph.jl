@@ -1,6 +1,6 @@
 include("./Edge.jl")
 
-using Plots
+cp = palette(:seaborn_colorblind,10)
 
 printred(s::String) = printstyled(s,color=:red)
 printgreen(s::String) = printstyled(s,color=:green)
@@ -10,17 +10,45 @@ mutable struct Hypergraph
     edges::Vector{Edge}
     nodes::Vector{Node}
 
-    versionNo::Int64
+    displayType::Int64
+    showTicks::Bool
+    showLabels::Bool
+    showLegend::Bool
 
     xMin::Float64
     xMax::Float64
     yMin::Float64
     yMax::Float64
 
-    Hypergraph() = new(Edge[],Node[],1,Inf,-Inf,Inf,-Inf)
-    Hypergraph(e,n,v,xm,xM,ym,yM) = new(e,n,v,xm,xM,ym,yM)
-    Hypergraph(;edges::Vector{Edge}=Edge[],nodes::Vector{Node}=Node[],versionNo::Int64=1,xMin::Float64=Inf,xMax::Float64=-Inf,yMin::Float64=Inf,yMax::Float64=-Inf) = new(edges,nodes,versionNo,xMin,xMax,yMin,yMax) 
+    Hypergraph() = new(Edge[],Node[],3,false,true,false,Inf,-Inf,Inf,-Inf)
+    Hypergraph(e,n,dt,sT,sLa,sLe,xm,xM,ym,yM) = new(e,n,dt,sT,sLa,sLe,xm,xM,ym,yM)
+    Hypergraph(;edges::Vector{Edge}=Edge[],nodes::Vector{Node}=Node[],displayType::Int64=3,showTicks=false,showLabels=true,showLegend=false,xMin::Float64=Inf,xMax::Float64=-Inf,yMin::Float64=Inf,yMax::Float64=-Inf) = new(edges,nodes,displayType,showTicks,showLabels,showLegend,xMin,xMax,yMin,yMax) 
     
+end
+
+function findNodeIndexfromLabel(g::Hypergraph,label::String)
+    for node in 1:length(g.nodes) if g.nodes[node].label == label return node end end
+    return false
+end
+
+function doesEdgeColorExist(g::Hypergraph,color::RGB{Float64})::Bool
+    for edge in g.edges if edge.color == color return true end end
+    return false
+end
+
+function findEdgeWithColor(g::Hypergraph,color::RGB{Float64})
+    for edge in g.edges if edge.color == color return edge end end
+    return false
+end
+
+function findNodeWithLabel(g::Hypergraph,label::String)
+    for node in g.nodes if node.label == label return node end end
+    return false
+end
+
+function findEdgeWithLabel(g::Hypergraph,label::String)
+    for edge in g.edges if edge.label == label return edge end end
+    return false
 end
 
 # returns the true if an edge with this label is found
@@ -52,6 +80,61 @@ function findAllIndex(lineArgs, substr)::Vector{Int64}
         if lineArgs[i] == substr push!(ret,i) end
     end
     return ret
+end
+
+function moveNode(g::Hypergraph, node::Node, xUnits::Float64, yUnits::Float64)
+    node.xCoord = xUnits
+    node.yCoord = yUnits
+    setGraphLimits(g)
+end
+
+function moveNode(g::Hypergraph, node::Node, dir::String, units::Float64)
+    if (dir == "left" || dir == "l")
+        node.xCoord -= units 
+    
+    elseif (dir == "right" || dir == "x" ||  dir == "r")
+        node.xCoord += units
+    
+    elseif (dir == "up" || dir == "y" ||  dir == "u")
+        node.yCoord += units     
+    
+    elseif (dir == "down" || dir == "d")
+        node.yCoord -= units
+    else
+        print("Invalid Direction in moveNode")
+    end
+
+    setGraphLimits(g)
+end
+
+function moveNode(g::Hypergraph, label::String, xUnits::Float64, yUnits::Float64)
+    node = findNodeWithLabel(g, label)
+
+    node.xCoord = xUnits
+    node.yCoord = yUnits
+
+    setGraphLimits(g)
+end
+
+function moveNode(g::Hypergraph, label::String, dir::String, units::Float64)
+    index = findNodeIndexFromLabel(g, label)
+
+    if (dir == "left" || dir == "l")
+        g.nodes[index].xCoord -= units 
+    
+    elseif (dir == "right" || dir == "x" ||  dir == "r")
+        g.nodes[index].xCoord += units
+    
+    elseif (dir == "up" || dir == "y" ||  dir == "u")
+        g.nodes[index].yCoord += units     
+    
+    elseif (dir == "down" || dir == "d")
+        g.nodes[index].yCoord -= units
+    else
+        print("Invalid Direction in moveNode")
+    end
+
+    setGraphLimits(g)
 end
 
 function setGraphLimits(g::Hypergraph)
@@ -112,7 +195,7 @@ end
 
 
 # This function returns a plot object containing the visualization of the graph object g
-function makePlot(g::Hypergraph, showTicks::Bool = false, showLabels::Bool = true)::Plots.Plot{Plots.GRBackend} 
+function makePlot(g::Hypergraph)::Plots.Plot{Plots.GRBackend} 
 
     graphPlot = plot()
     k = 0.25
@@ -122,8 +205,8 @@ function makePlot(g::Hypergraph, showTicks::Bool = false, showLabels::Bool = tru
     
     plot!(graphPlot, xlim = [g.xMin - deltaX,g.xMax + deltaX], ylim = [g.yMin - deltaY, g.yMax + deltaY])
     #plot!(graphPlot, aspect_ratio=:equal)
-    plot!(graphPlot, grid = false, legend = false)
-    plot!(graphPlot, axis = showTicks, xticks = showTicks, yticks = showTicks) 
+    plot!(graphPlot, grid = g.showTicks, legend = g.showLegend)
+    plot!(graphPlot, axis = g.showTicks, xticks = g.showTicks, yticks = g.showTicks) 
 
     if isempty(g.nodes)
         return graphPlot
@@ -152,42 +235,52 @@ function makePlot(g::Hypergraph, showTicks::Bool = false, showLabels::Bool = tru
 
     # Populate the edges vector and plot the edges
     for currEdge in g.edges
-        #push!(edges, [currEdge.sourceKey, currEdge.destKey])
-
-        # u = currEdge.sourceKey
-        # v = currEdge.destKey
-
-        # plot!(graphPlot,[xy[u,1]; xy[v,1]], [xy[u,2]; xy[v,2]],color = currEdge.color, linewidth = currEdge.lineWidth)
-        # midx = (xy[u,1] + xy[v,1]) / 2
-        # midy = (xy[u,2] + xy[v,2]) / 2
-
-        # if length(edges[j]) == 2
-        #     u = edges[j][1]
-        #     v = edges[j][2]
-        #     plot!(f,[xy[u,1]; xy[v,1]], [xy[u,2]; xy[v,2]],color = :black,linewidth = lw)
-        # else
-        lw = 1.5
         la = 1
-        lc = :black
         ms = 10
-
-        color = :gray
-        #colorset = palette(:seaborn_colorblind)
-        alp = .05
+        alp = .1
         ms = 1
-        H = hyperedgehull(currEdge)
-        plot!(graphPlot,VPolygon(H),alpha = alp,linewidth = lw, markerstrokewidth = ms, linecolor = color,linealpha = la)
-        #end
-        
 
+        if g.displayType == 1
+            
+            H = hyperedgehull(currEdge)
+            plot!(graphPlot,VPolygon(H),alpha = alp,linewidth = currEdge.lineWidth, markerstrokewidth = ms, linecolor = currEdge.color,linealpha = la, label=currEdge.label)
+        elseif g.displayType == 2
+            #find centroid of poiints 
+            xCenter::Float64 = 0.0
+            yCenter::Float64 = 0.0
+            for node in currEdge.members
+                xCenter += node.xCoord
+                yCenter += node.yCoord
+            end
+            xCenter /= length(currEdge.members)
+            yCenter /= length(currEdge.members)
+
+            for node in currEdge.members
+                plot!(graphPlot,[xCenter; node.xCoord], [yCenter; node.yCoord],color = currEdge.color, linewidth = currEdge.lineWidth)
+            end
+            
+
+            scatter!(graphPlot, [xCenter], [yCenter], alpha = alp, markersize =10, markershape = :rect, color = currEdge.color, markerstrokecolor = currEdge.color)
+            annotate!(graphPlot, xCenter, yCenter, text(currEdge.label, plot_font, txtsize, color="black"))
+        elseif g.displayType == 3
+            for S in 1:length(currEdge.members)-1
+                nodeS = currEdge.members[S]
+                for D in S+1:length(currEdge.members)
+                    nodeD = currEdge.members[D]
+                    plot!(graphPlot,[nodeS.xCoord; nodeD.xCoord], [nodeS.yCoord; nodeD.yCoord],color = currEdge.color, linewidth = currEdge.lineWidth)
+                end
+                
+            end
+        end
     end
+
     
     #Plot the xy circles and node labels
     for currNode in g.nodes
 
-        scatter!(graphPlot, xy[:,1], xy[:,2], markersize = currNode.size, color = currNode.fillColor, markerstrokecolor = currNode.outlineColor)
+        scatter!(graphPlot, xy[:,1], xy[:,2], markersize = currNode.size, color = currNode.fillColor, markerstrokecolor = currNode.outlineColor, label="")
         
-        if (showLabels == true)
+        if (g.showLabels == true)
             annotate!(graphPlot, currNode.xCoord, currNode.yCoord, text(currNode.label, plot_font, txtsize, color=currNode.labelColor))
         end
     end
@@ -292,7 +385,7 @@ function removeNode(g::Hypergraph, label::String)
 
 end
 
-function addEdge(g::Hypergraph, label::String, mems = Node[],color = "black",linew = 1.0)
+function addEdge(g::Hypergraph, label::String, mems = Node[],color = RGB{Float64}(0.0,0.0,0.0) ,linew = 1.0)
     newEdge = Edge(label, mems, color,linew)
     #check for duplicate labels
     badEdgeLabel = false
@@ -306,6 +399,11 @@ function addEdge(g::Hypergraph, label::String, mems = Node[],color = "black",lin
     # Check if a node with the same label is already in the graph
     if (badEdgeLabel)
         printyellow("Provided edge label \"$label\" is empty or already exists in the graph. The edge was given the label $(newEdge.label)\n")
+    end
+    i = 0
+    while (newEdge.color == RGB{Float64}(0.0,0.0,0.0)) || doesEdgeColorExist(g,newEdge.color)
+        i = i+1 
+        newEdge.color = cp[i]
     end
 
 
@@ -388,15 +486,406 @@ function simpleAddNodetoEdge(g::Hypergraph,nodeLabel::String,edgeLabel::String)
         printyellow("No node with label $nodeLabel found in the graph\nMaking a new Node with label $nodeLabel\n")
         nodeIndex = length(g.nodes)+1
         addNode(g,nodeLabel)
-        nodeLabel = g.nodes[nodeIndex].label
     end
-
+    #does edge exist
     for edge in g.edges
         if edge.label == edgeLabel
-            push(edge.members, g.nodes[nodeIndex])
+            push!(edge.members, g.nodes[nodeIndex])
             return
         end
     end
+    #edge does not exist then add it
     addEdge(g,edgeLabel)
     push!(g.edges[end].members, g.nodes[nodeIndex])
 end
+
+#Layout
+function getTotalDegrees(g::Hypergraph)::Matrix{Float64}
+    degree = zeros(n,1)
+    for nodeNum in 1:length(g.nodes) for edge in g.edges if g.nodes[nodeNum] in edge degree[nodeNum] += 1 end end end
+    return degree 
+end
+
+function applyNewCoords(g::Hypergraph, xy::Matrix{Float64})
+    if length(g.nodes) != (size(xy)[1])
+        printred("Number of nodes in graph ", g.nodes, " != ", (size(xy)[1]),"\n")
+        return
+    end
+    for nodeIndex in 1:length(g.nodes)
+        g.nodes[nodeIndex].xCoord = xy[nodeIndex,1]
+        g.nodes[nodeIndex].yCoord = xy[nodeIndex,2]
+    end
+    setGraphLimits(g)
+end
+
+function createCircularCoords(g::Hypergraph)::Matrix{Float64}
+    n = length(g.nodes)
+    r = 1.5 * n
+    xy = zeros(n,2)
+    
+    # Places nodes in a circle:
+    for j in 1:n
+        angle = (2π / n) * j;
+        x = round(cos(angle); digits = 5)
+        y = round(sin(angle); digits = 5)
+        xy[j,:] = [(x * r) (y * r)]
+    end
+
+    return xy
+end
+
+function createDegreeDependantCoods(g::Hypergraph)::Matrix{Float64}
+    n = length(g.nodes)
+    r = .9 * n
+    degree = getTotalDegrees(g) .+ 1
+    xy = zeros(n,2)
+    # Updates xy to be degree-dependant
+    for j in 1:n
+        angle = (2π / n) * j;
+        x = round(cos(angle); digits = 5)
+        y = round(sin(angle); digits = 5)
+        xy[j,:] = [(x * r /(degree[j] * 0.5)) (y * r /(degree[j] * 0.5))]
+    end
+    return xy
+end
+
+
+# The following functions are used to create a Force-Directed Layout
+
+function magnitude(f::Vector{Float64})::Float64
+    return sqrt(f[1]^2 + f[2]^2)
+end
+
+# u is the node experiencing the force
+# v is the node exerting the force
+function f_rep(u::Node, v::Node, k::Float64 = 2.0)::Vector{Float64}
+    uPos = [u.xCoord, u.yCoord]
+    vPos = [v.xCoord, v.yCoord]
+
+    dir = (uPos - vPos)
+    dist = magnitude(dir)
+
+    rep = k .* dir ./ (dist)
+
+    return rep
+end
+
+function f_attr(u::Node, v::Node, k::Float64 = 1.25)::Vector{Float64}
+    uPos = [u.xCoord, u.yCoord]
+    vPos = [v.xCoord, v.yCoord]
+
+    dir = (uPos - vPos)
+    dist = magnitude(dir)
+
+    att = k .* dir ./ (dist)
+
+    return -1 .* att
+end
+
+function getCoolingFactor(t)::Float64
+    # Note: This is just an arbitrary function. Could be tweaked later
+    return (200 / Float64(t))
+end
+
+# Returns a COPY of the Node in the graph with the specified index/key
+#TODO cannot use key
+
+
+# Returns a vector of Nodes that are adjacent to the Node v
+# - If g is directed, it will return only nodes of the form (v,u)
+# - If g is undirected, it will return nodes of the form (v,u) and (u,v)
+function getAdjacentNodes(g::Hypergraph, v::Node)
+    adjacentNodes = Vector{Node}()
+    for edge in g.edges
+        if v in edge
+            for node in edge
+                if node != v
+                    push!(adjacentNodes, Node(node))
+                end
+            end
+        
+        end
+
+    end
+
+    print("the adjacent nodes are ", adjacentNodes)
+
+    return adjacentNodes
+end
+
+function parseForceDirectedArgs(commands::Vector{String})
+    # ε::Float64, K::Int64, kRep::Float64 = 1.5, kAttr::Float64 = 3.0
+    ε = 1e-2
+    K = 20
+    rep = 1.5
+    attr = 2.0
+
+    for str in commands
+        str = lowercase(str)
+    end
+    
+    # epsilon
+    i = findIndex(commands, "-e")
+    if i != -1
+        ε = parse(Float64, commands[i + 1])
+    end
+
+    # K
+    i = findIndex(commands, "-iters")
+    if i != -1
+        K = parse(Int64, commands[i + 1])
+    end
+
+    i = findIndex(commands, "-rep")
+    if i != -1
+        rep = parse(Float64, commands[i + 1])
+    end
+
+    i = findIndex(commands, "-attr")
+    if i != -1
+        attr = parse(Float64, commands[i + 1])
+    end
+    
+    return [ε, K, rep, attr]
+end
+
+
+# The following function updates the coordinates of the nodes to meet a force-directed layout
+# g is the graph object containing the initial layout
+# ε is the threshold. ε > 0. Once forces get smaller than epsilon, we stop the algorithm
+# K is the maximum number of iterations
+function forceDirectedCoords(g::Hypergraph, ε::Float64, K::Int64, kRep::Float64 = 1.5, kAttr::Float64 = 3.0)
+    t = 1
+    n = length(g.nodes)
+
+    # Store the positions and forces of each node in a matrix of size nx2
+    #positions = [(n .* rand(2) .- (n / 2.0)) for i in 1:n]
+    positions = [(n .* rand(2) .- n) for i in 1:n] 
+    nodeForces = [zeros(2) for i in 1:n]
+    maxForce = -Inf
+
+    # Condition 1: the number of iterations so far is less than K
+    # Condition 2: The maximum force we computed in the previous iteration is greater than epsilon
+    while (t < K) && (maxForce > ε)
+        uNum = 0
+        for u ∈ g.nodes
+            uNum +=1
+            adjacentNodes = getAdjacentNodes(g,u)
+            # Repellent force must be computed with all vertices
+            for v ∈ g.nodes
+                if (u == v)
+                    continue # we are in the same node
+                end
+
+                nodeForces[uNum] += f_rep(u, v, kRep)
+
+            end
+            # Attractive force must ONLY be computed with adjacent vertices
+            for v ∈ adjacentNodes
+                if (u == v)
+                    continue # we are in the same node
+                end
+                nodeForces[uNum] += f_attr(u, v, kAttr)
+            end
+
+            if (magnitude(nodeForces[uNum]) > maxForce)
+                maxForce = f_u
+            end
+        end
+
+        for u ∈ 1:n
+            positions[u] += (getCoolingFactor(t) .* nodeForces[u])
+
+        end
+
+        t = t + 1
+    end
+
+    # Apply the new coordinates
+    nodeNum = 0
+    for node ∈ g.nodes
+        nodeNum+=1
+        node.xCoord = positions[nodeNum][1]
+        node.yCoord = positions[nodeNum][2]
+    end
+end
+
+
+
+# The following functions enable spectral layout
+
+# The following function will create a sparse matrix representing the graph
+function createSparseMatrix(g::Hypergraph)::SparseArrays.SparseMatrixCSC{Float64, Int64}
+    ei = []
+    ej = []
+    w = []
+    for edge in g.edges
+        for node1 in edge.members
+            i1 = findNodeIndexfromLabel(g,node1.label)
+            
+            for node2 in edge.members
+                if node1 != node2
+                    i2 = findNodeIndexfromLabel(g,node2.label)
+                    push!(ei, i1)
+                    push!(ej, i2)
+                    push!(w, 1.0) 
+
+                end
+            end
+        end
+    end
+
+    A = sparse(ei, ej, w)
+    
+    return A
+end
+
+
+# The following function will take in a Matrix and return a set of xy coordinates representing the nodes' spectral layout
+function spectral_layout(A)
+    d = vec(sum(A,dims = 2))
+    Dhalf = Diagonal(d.^(-1/2))
+    L = I - Dhalf*A*Dhalf
+    # Lam, E = eigs(L; nev = 3, which=:SM)
+
+    sc = size(L,1)
+    Vl,Vc,convinfo = eigsolve(L + sc*LinearAlgebra.I, 3, :SR; tol = 1e-8, maxiter = 1000, verbosity = 0)
+    lam2 = Real(Vl[2])-sc
+    E = [Vc[2] Vc[3]] 
+
+    return E
+end
+
+# The following function takes in a 
+function makeRealMatrix(xy::Matrix{ComplexF64})
+    rows = size(xy,1)
+    cols = size(xy,2)
+
+    M = zeros(rows, cols)
+    
+    for i in 1:rows
+        for j in 1:cols
+            M[i, j] = real(xy[i, j])
+        end
+    end
+
+    return M
+end
+
+
+function spectralCoords(g::Hypergraph)
+    A = createSparseMatrix(g)
+
+    try
+        xy = spectral_layout(A)
+
+        if (typeof(xy) == Matrix{ComplexF64})
+            xy = makeRealMatrix(xy)
+        end
+    
+        applyNewCoords(g, xy)
+
+    catch e
+        printred("Could not create a spectral layout due to a failed eigenvalue computation.\n")
+        return
+    end
+end
+function emptyGraph!(g::Hypergraph)
+    empty!(g.nodes)
+    empty!(g.edges)
+end
+
+##loaders
+function loadxy(g::Hypergraph,filepath::String)
+    #xy::Matrix{Float64} = zeros(Float64)
+    numNodes = length(g.nodes)
+    #xy::Matrix{Float64} = zeros(Float64,numNodes,2)
+    lines = []
+    try 
+        open(filepath) do file 
+            lines = [i for i in readlines(file) if i != ""] 
+        end
+    catch 
+        println(filepath, " could not be loaded.")  
+        return 
+    end
+    numLines = length(lines) 
+    if numNodes != 0 && numNodes != length(lines) 
+        printyellow("There are $numNodes nodes and $numLines lines in the file.\nCannot assigne nodes xy values from this file. \n")  
+        return
+    end
+    if numNodes == 0
+        for i in 1:numLines
+            coords = [parse(Float64,j) for j in split(lines[i],",")]
+            newNode = Node(xCoord=coords[1],yCoord=coords[2])
+            badNodeLabel = false
+            i = 0
+            while (newNode.label == "") || doesNodeLabelExist(g,newNode.label)
+                i = i+1 
+                newNode.label = string(i)
+                badNodeLabel = true
+            end
+            push!(g.nodes,newNode)
+        end
+    else
+        for nodeNum in 1:numNodes
+            g.nodes[nodeNum].xCoord,g.nodes[nodeNum].yCoord = [parse(Float64,j) for j in split(lines[nodeNum],",")]
+        end
+
+    end
+end
+function loadhgraph(g::Hypergraph,filepath::String)
+    emptyGraph!(g)
+    numNodes = length(g.nodes)
+    lines = []
+    try 
+        open(filepath) do file 
+            lines = [i for i in readlines(file) if i != ""] 
+        end
+    catch 
+        println(filepath, " could not be loaded.")  
+        return 
+    end
+    for edge in lines
+        newEdge = Edge()
+        #check for duplicate labels
+        badEdgeLabel = false
+        i = 64
+        while (newEdge.label == "") || doesEdgeLabelExist(g,newEdge.label)
+            i = i+1 
+            newEdge.label = string(Char(i))
+            badEdgeLabel = true
+        end
+        i = 0
+        while (newEdge.color == RGB{Float64}(0.0,0.0,0.0)) || doesEdgeColorExist(g,newEdge.color)
+            i = i+1 
+            newEdge.color = cp[i]
+        end
+        for node in [string(i) for i in split(edge,",")]
+            maybeNode = findNodeWithLabel(g,node)
+            if maybeNode == false
+                push!(newEdge.members,addNode(g,node))
+            else
+                push!(newEdge.members,maybeNode)
+            end
+        end
+        push!(g.edges,newEdge)
+    end
+
+end
+function loadall(g::Hypergraph, graphfilepath::String, xyfilepath::String)
+    loadhgraph(g,graphfilepath)
+    loadxy(g,xyfilepath)
+end
+
+
+Base.:(==)(c1::Hypergraph, c2::Hypergraph) = 
+c1.edges == c2.edges && 
+c1.nodes == c2.nodes && 
+c1.displayType == c2.displayType && 
+c1.showTicks == c2.showTicks && 
+c1.showLabels == c2.showLabels && 
+c1.xMin == c2.xMin && 
+c1.xMax == c2.xMax && 
+c1.yMin == c2.yMin && 
+c1.yMax == c2.yMax 

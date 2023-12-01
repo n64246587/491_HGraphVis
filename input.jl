@@ -24,7 +24,7 @@ function displayGraph()
         empty!(G.nodes)
         empty!(G.edges)
     end
-    display(makePlot(G, showTicks, showLabels))
+    display(makePlot(G))
 end
 
 function programExited()
@@ -55,11 +55,11 @@ function promptLoop()
             end
             if commands[1] in quitAliases return 
             elseif commands[1] == "help" 
-                if commandParts <2 printHelp() else printHelp(commands[2:end]) end
+                if commandParts <2 allHelp() else printHelp(commands[2:end]) end
 
             elseif commands[1] in addAliases
                 if commands[2] == "node"
-                    if commands[5] == "edge" && commandParts == 6
+                    if commandParts == 6 && commands[5] == "edge"
                         simpleAddNodetoEdge(G,commands[3],commands[6])
                     elseif commandParts == 2 # add node
                         nodetoadd = addNode(G, commands)
@@ -79,7 +79,96 @@ function promptLoop()
                 elseif commands[2] == "edge"
                     removeEdge(G,commands[3])
                 end
-            
+        
+
+            elseif commands[1] in moveAliases
+                moveCoord = 2
+                if "node" == commands[2] moveCoord = 3 end
+                nodeLabel = String(commands[moveCoord])
+                nodeToMove = findNodeWithLabel(G, nodeLabel)
+                if "to" == commands[moveCoord+1]
+                    xUnits = 0.0
+                    if commands[moveCoord+2] == "-"
+                        xUnits = nodeToMove.xCoord 
+                    else
+                        xUnits = parse(Float64, commands[moveCoord+2])
+                    end
+                    yUnits = 0.0
+                    if commands[moveCoord+3] == "-"
+                        yUnits = nodeToMove.yCoord
+                    else
+                        yUnits = parse(Float64, commands[moveCoord+3])
+                    end
+                    
+                    moveNode(G, nodeLabel, xUnits, yUnits)
+                else
+                    xOrY = lowercase(commands[moveCoord+1]) 
+                    units = parse(Float64, commands[moveCoord+2])
+                    moveNode(G, nodeToMove, xOrY, units)
+                end
+            elseif commands[1] in layoutAliases
+                layoutType = lowercase(commands[2])
+                if layoutType in circularAliases
+                    applyNewCoords(G, createCircularCoords(G))
+    
+                elseif layoutType in degreeAliases
+                    applyNewCoords(G, createDegreeDependantCoods(G))
+    
+                elseif layoutType in forceAliases
+                    # returns a vector containing [ε, K, rep, attr]
+                    forceDirArgs = parseForceDirectedArgs(commands)
+                    ε = forceDirArgs[1]
+                    K = floor(Int64, forceDirArgs[2])
+                    rep = forceDirArgs[3]
+                    attr = forceDirArgs[4]
+                    println("""Applying force-directed layout with parameters:
+                       ⬗ Minimum force magnitude / ε = $ε
+                       ⬗ Max Iterations = $K
+                       ⬗ Repulsive factor = $rep
+                       ⬗ Attractive factor = $attr """)
+    
+                    forceDirectedCoords(G, ε, K, rep, attr)
+    
+                elseif layoutType in spectralAliases
+                    spectralCoords(G)
+                end
+            elseif length(commands[1])>3 && commands[1][1:4] == "load"
+                filepath1 = ""
+                filepath2 = ""
+                atCoord = 2
+                loadwhat = commands[1][5:end]
+                if loadwhat == ""
+                    loadwhat = commands[2]
+                    atCoord = 3
+                end
+                filepath1 = commands[atCoord]
+                if loadwhat in loadxyAliases
+                    loadxy(G,filepath1)
+                elseif loadwhat in loadgraphAliases
+                    loadhgraph(G, filepath1)
+                else
+                    loadall(G,commands[atCoord-1],filepath1)
+                end
+                    
+            elseif commands[1] in toggleAliases
+                if commands[2] == "grid"
+                    G.showTicks = !G.showTicks
+                elseif commands[2] == "labels"
+                    G.showLabels = !G.showLabels
+                elseif commands[2] == "legend"
+                    G.showLegend = !G.showLegend
+                elseif commands[2] == "debug"
+                    debug = !debug
+                end
+            elseif commands[1] in edgeModeAliases
+                if commands[2] in cliqueAliases
+                    G.displayType = 3
+                elseif commands[2] in bipartiteAliases
+                    G.displayType = 2
+                elseif commands[2] in convexAliases
+                    G.displayType = 1
+                end
+
 
 
             else 

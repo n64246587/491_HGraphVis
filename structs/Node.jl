@@ -8,10 +8,10 @@ mutable struct Node
 
     xCoord::Float64
     yCoord::Float64
-    Node() = new("",1,"black","white","black")
-    Node(label="", size=1, outlineColor="black", fillColor="white", labelColor="black", xCoord=0., yCoord=0.) = new(label,  size, outlineColor, fillColor, labelColor, xCoord, yCoord)
-    Node(;label="", size=1, outlineColor="black", fillColor="white", labelColor="black", xCoord=0., yCoord=0.) = new(label, size, outlineColor, fillColor, labelColor, xCoord, yCoord)
-
+    Node() = new("",10,"black","white","black")
+    Node(label="", size=10, outlineColor="black", fillColor="white", labelColor="black", xCoord=0., yCoord=0.) = new(label,  size, outlineColor, fillColor, labelColor, xCoord, yCoord)
+    Node(;label="", size=10, outlineColor="black", fillColor="white", labelColor="black", xCoord=0., yCoord=0.) = new(label, size, outlineColor, fillColor, labelColor, xCoord, yCoord)
+    Node(n::Node) = new(n.label, n.size, n.outlineColor, n.fillColor, n.labelColor, n.xCoord, n.yCoord)
 end
 
 # Parses a node based on vac file commands
@@ -55,3 +55,12 @@ function parseNode(lineArgs::Vector{String})::Node
 
     return Node(label, size, outlineColor, fillColor, labelColor, xCoord, yCoord)
 end
+
+Base.:(==)(c1::Node, c2::Node) = 
+c1.label == c2.label && 
+c1.size == c2.size && 
+c1.outlineColor == c2.outlineColor && 
+c1.fillColor == c2.fillColor && 
+c1.labelColor == c2.labelColor && 
+c1.xCoord == c2.xCoord && 
+c1.yCoord == c2.yCoord

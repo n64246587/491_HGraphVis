@@ -1,15 +1,15 @@
 include("./Node.jl")
-using LazySets
+using LazySets,Plots,KrylovKit,SparseArrays
 
 mutable struct Edge
     label::String
     members::Vector{Node}
-    color::String
+    color::RGB{Float64}
     lineWidth::Float64
 
-    Edge() = new("",Node[],"black",1.0)
+    Edge() = new("",Node[],RGB{Float64}(0.0,0.0,0.0),1.0)
     Edge(l,m,c,lw) = new(l,m,c,lw)
-    Edge(;l="",m=Node[],c="black",lw=1.0) = new(l,m,c,lw)
+    Edge(;l="",m=Node[],c=RGB{Float64}(0.0,0.0,0.0),lw=1.0) = new(l,m,c,lw)
 end
 
 function parseEdge(lineArgs::Vector{String})::Edge
@@ -24,7 +24,7 @@ function parseEdge(lineArgs::Vector{String})::Edge
     end
     i = findIndex(lineArgs, "-c")
     if i != -1
-        color = parse(Float64, lineArgs[i+1])
+        color = parse(Colorant{Float64}, lineArgs[i+1])
     end
     i = findIndex(lineArgs, "-w")
     if i != -1
@@ -57,12 +57,11 @@ function circlepoints(centerX,centerY,radius,pts = 100)
         return X
     end
     
-    function hyperedgehull(edge::Edge,r=.1)
+    function hyperedgehull(edge::Edge,r=.25)
     # xy gives the (x,y) coordinates for nodes
     # e is a set of indices defining a hyperedge
     # r controls how much of a border to put around nodes
     # Output: a convex hull object that defines the hyperedge
-        
         p = Vector{Vector{Float64}}()
         for node in edge.members
             append!(p, circlepoints(node.xCoord, node.yCoord ,r))
@@ -70,3 +69,11 @@ function circlepoints(centerX,centerY,radius,pts = 100)
         H = convex_hull(p)
         return H
     end
+
+
+
+Base.:(==)(c1::Edge, c2::Edge) = 
+c1.label == c2.label &&
+c1.members == c2.members &&
+c1.color == c2.color &&
+c1.lineWidth == c2.lineWidth
