@@ -1,15 +1,18 @@
 include("./Node.jl")
 using LazySets,Plots,KrylovKit,SparseArrays
 
+nametoColorDict = Dict(value => key for (key, value) in Colors.color_names)
 mutable struct Edge
     label::String
     members::Vector{Node}
     color::RGB{Float64}
     lineWidth::Float64
+    displayType::Int64
+    hullSize::Float64
 
-    Edge() = new("",Node[],RGB{Float64}(0.0,0.0,0.0),1.0)
-    Edge(l,m,c,lw) = new(l,m,c,lw)
-    Edge(;l="",m=Node[],c=RGB{Float64}(0.0,0.0,0.0),lw=1.0) = new(l,m,c,lw)
+    Edge() = new("",Node[],RGB{Float64}(0.0,0.0,0.0),1.0,3,0.25)
+    Edge(l,m,c,lw,dt,hs) = new(l,m,c,lw,dt,hs)
+    Edge(;l="",m=Node[],c=RGB{Float64}(0.0,0.0,0.0),lw=1.0,dt=3,hs=0.25) = new(l,m,c,lw,dt,hs)
 end
 
 function parseEdge(lineArgs::Vector{String})::Edge
@@ -70,6 +73,11 @@ function circlepoints(centerX,centerY,radius,pts = 100)
         return H
     end
 
+#dictionary does not have every color nametoColorDict#might have to load color by some other metric like RGB values in the text file
+function getColorName(c::RGB{Float64})::String
+    colorRep::Tuple{Int64, Int64, Int64} = (Int64(round(c.r*255)), Int64(round(c.g*255)), Int64(round(c.b*255)))
+    return nametoColorDict[colorRep]
+end
 
 
 Base.:(==)(c1::Edge, c2::Edge) = 

@@ -14,7 +14,17 @@ showTicks = false
 showLabels = true
 
 
-
+function genericSave(filename::String)
+    # Check the extension of filename
+    filepath,extension = [String(split(filename, ".")[i]) for i in 1:2]
+    if (extension == "png" || extension == "pdf")
+        savefig(makePlot(G), filename)
+    elseif (extension == "txt")
+        outputGraphToTxt(G, filepath)
+    else
+        printstyled("Graph could not be saved with extention ",extension, color=:red)
+    end
+end
 
 
 
@@ -36,7 +46,7 @@ function programExited()
     end
 end
 
-ssplit(s::String,delim::String=" ")::Vector{String} = [lowercase(String(i)) for i in split(strip(s), delim)] 
+
 
 
 
@@ -132,23 +142,19 @@ function promptLoop()
                 elseif layoutType in spectralAliases
                     spectralCoords(G)
                 end
-            elseif length(commands[1])>3 && commands[1][1:4] == "load"
-                filepath1 = ""
-                filepath2 = ""
-                atCoord = 2
-                loadwhat = commands[1][5:end]
-                if loadwhat == ""
-                    loadwhat = commands[2]
-                    atCoord = 3
+            elseif commands[1] in loadAliases
+                if commands[2] in loadNodesAliases
+                    loadxy(G,commands[3])
+                elseif commands[2] in loadEdgesAliases
+                    loadhgraph(G,commands[3])
+                    #TODO loading edges after nodes loses xy coords
+                elseif commands[2] in loadNodeMetaAliases
+
+                elseif commands[2] in loadEdgeMetaAliases
+
                 end
-                filepath1 = commands[atCoord]
-                if loadwhat in loadxyAliases
-                    loadxy(G,filepath1)
-                elseif loadwhat in loadgraphAliases
-                    loadhgraph(G, filepath1)
-                else
-                    loadall(G,commands[atCoord-1],filepath1)
-                end
+                
+                
                     
             elseif commands[1] in toggleAliases
                 if commands[2] == "grid"
@@ -160,6 +166,7 @@ function promptLoop()
                 elseif commands[2] == "debug"
                     debug = !debug
                 end
+
             elseif commands[1] in edgeModeAliases
                 if commands[2] in cliqueAliases
                     G.displayType = 3
@@ -167,12 +174,26 @@ function promptLoop()
                     G.displayType = 2
                 elseif commands[2] in convexAliases
                     G.displayType = 1
+                else
+                    G.displayType = 0 #TODO make edge drawing edpendent on the edge
                 end
 
+            elseif commands[1] in setHulllRadiusAliases
+                G.hullRad = parse(Float64, commands[2])
+
+            elseif commands[1] in edgelistAliases
+                if commandParts == 1 printEdgelist(G.edges) 
+                else printEdgelist(commands[1]) end
+
+            elseif commands[1] in setColorAliases
+                printred("IMPLIMENT THIS")#TODO
+
+            elseif commands[1] in saveAliases
+                genericSave(commands[2])
 
 
             else 
-                printred("$(join(commands," ")) is not a recognized Command.\nTry `help remove` for assistance.\n") 
+                printred("$(join(commands," ")) is not a recognized Command.\nTry `help` for assistance.\n") 
                 continue
             end
            

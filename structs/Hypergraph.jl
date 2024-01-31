@@ -5,6 +5,8 @@ cp = palette(:seaborn_colorblind,10)
 printred(s::String) = printstyled(s,color=:red)
 printgreen(s::String) = printstyled(s,color=:green)
 printyellow(s::String) = printstyled(s,color=:yellow)
+ssplit(s::String,delim::String=" ")::Vector{String} = [lowercase(String(i)) for i in split(strip(s), delim)] 
+stringWithinSB(s::String)::String = String(s[findfirst('[',s)+1:findfirst(']',s)-1])
 
 mutable struct Hypergraph
     edges::Vector{Edge}
@@ -20,9 +22,11 @@ mutable struct Hypergraph
     yMin::Float64
     yMax::Float64
 
-    Hypergraph() = new(Edge[],Node[],3,false,true,false,Inf,-Inf,Inf,-Inf)
-    Hypergraph(e,n,dt,sT,sLa,sLe,xm,xM,ym,yM) = new(e,n,dt,sT,sLa,sLe,xm,xM,ym,yM)
-    Hypergraph(;edges::Vector{Edge}=Edge[],nodes::Vector{Node}=Node[],displayType::Int64=3,showTicks=false,showLabels=true,showLegend=false,xMin::Float64=Inf,xMax::Float64=-Inf,yMin::Float64=Inf,yMax::Float64=-Inf) = new(edges,nodes,displayType,showTicks,showLabels,showLegend,xMin,xMax,yMin,yMax) 
+    hullRad::Float64
+
+    Hypergraph() = new(Edge[],Node[],3,false,true,false,Inf,-Inf,Inf,-Inf,0.25)
+    Hypergraph(e,n,dt,sT,sLa,sLe,xm,xM,ym,yM, hR) = new(e,n,dt,sT,sLa,sLe,xm,xM,ym,yM,hR)
+    Hypergraph(;edges::Vector{Edge}=Edge[],nodes::Vector{Node}=Node[],displayType::Int64=3,showTicks=false,showLabels=true,showLegend=false,xMin::Float64=Inf,xMax::Float64=-Inf,yMin::Float64=Inf,yMax::Float64=-Inf,hullRad::Float64=0.25) = new(edges,nodes,displayType,showTicks,showLabels,showLegend,xMin,xMax,yMin,yMax,hullRad) 
     
 end
 
@@ -242,7 +246,7 @@ function makePlot(g::Hypergraph)::Plots.Plot{Plots.GRBackend}
 
         if g.displayType == 1
             
-            H = hyperedgehull(currEdge)
+            H = hyperedgehull(currEdge, g.hullRad)
             plot!(graphPlot,VPolygon(H),alpha = alp,linewidth = currEdge.lineWidth, markerstrokewidth = ms, linecolor = currEdge.color,linealpha = la, label=currEdge.label)
         elseif g.displayType == 2
             #find centroid of poiints 
@@ -494,6 +498,12 @@ function simpleAddNodetoEdge(g::Hypergraph,nodeLabel::String,edgeLabel::String)
             return
         end
     end
+    maybeEdge = edgeFromMembers(g,edgeLabel)
+    if maybeEdge != false 
+        push!(maybeEdge.members, g.nodes[nodeIndex]) 
+        return 
+    end
+
     #edge does not exist then add it
     addEdge(g,edgeLabel)
     push!(g.edges[end].members, g.nodes[nodeIndex])
@@ -835,7 +845,7 @@ function loadxy(g::Hypergraph,filepath::String)
     end
 end
 function loadhgraph(g::Hypergraph,filepath::String)
-    emptyGraph!(g)
+    #emptyGraph!(g)
     numNodes = length(g.nodes)
     lines = []
     try 
@@ -856,15 +866,17 @@ function loadhgraph(g::Hypergraph,filepath::String)
             newEdge.label = string(Char(i))
             badEdgeLabel = true
         end
+        #check for duplicate colors
         i = 0
         while (newEdge.color == RGB{Float64}(0.0,0.0,0.0)) || doesEdgeColorExist(g,newEdge.color)
             i = i+1 
             newEdge.color = cp[i]
         end
-        for node in [string(i) for i in split(edge,",")]
-            maybeNode = findNodeWithLabel(g,node)
+        #looks for nodes by label (node is actually a node label here)
+        for nodeLabel in [string(i) for i in split(edge,",")]
+            maybeNode = findNodeWithLabel(g,nodeLabel)
             if maybeNode == false
-                push!(newEdge.members,addNode(g,node))
+                push!(newEdge.members,addNode(g,nodeLabel))
             else
                 push!(newEdge.members,maybeNode)
             end
@@ -876,6 +888,131 @@ end
 function loadall(g::Hypergraph, graphfilepath::String, xyfilepath::String)
     loadhgraph(g,graphfilepath)
     loadxy(g,xyfilepath)
+end
+
+function parseEdgeExpression(g::Hypergraph,nodeLabels::String)::Edge
+    edg = Edge()
+    for nodeLabel in ssplit(nodeLabels,",")
+        maybenode = findNodeWithLabel(g,nodeLabel)
+        if maybenode != false push!(edg.members,maybenode) end
+    end
+    return edg
+end
+
+function edgeSubsetOfEdgeLabel(largerEdge::Edge, smallerEdge::Edge)::Bool
+
+    for node in smallerEdge.members 
+        foundName::Bool = false
+       for node2 in largerEdge.members
+            if node2.label == node.label
+                foundName = true
+                break
+            end
+       end
+       if foundName == false return false end
+    end
+    return true
+
+end
+
+function edgesWithLabels(g::Hypergraph, nodeLabels::String)::Vector{Edge}
+    edgeOfLabels::Edge = parseEdgeExpression(g,nodeLabels)
+    ewm::Vector{Edge} = Edge[]
+    for edge in g.edges
+        if edgeSubsetOfEdgeLabel(edge,edgeOfLabels) push!(ewm,edge) end
+    end
+    return ewm
+end
+
+function printEdgelist(edgeList::Vector{Edge})
+    labelsList::Vector{String} = []
+    longestLabel = 0
+    membersList::Vector{String} = []
+    longestMembers = 0
+    for edge in edgeList
+        label = edge.label
+        llength = length(label)
+        members = "["*join([node.label for node in edge.members],",")*"]"
+        mlength = length(members)
+        if llength>longestLabel longestLabel = llength end
+        if mlength>longestMembers longestMembers = mlength end
+        push!(labelsList,label)
+        push!(membersList,members)
+    end
+    labelSpace = max(longestMembers,5)
+    memberSpace = max(longestMembers,7)
+    println("label"*" "^(labelSpace-5)*" | "*"members"*" "^(memberSpace-7))
+    println("_"^(labelSpace)*" | "*"_"^(memberSpace))
+    for i in 1:length(labelsList)
+        thisLabel = labelsList[i]
+        thisMembers = membersList[i]
+        println("$thisLabel"*" "^(labelSpace-length(thisLabel))*" | "*"$thisMembers"*" "^(memberSpace-length(thisMembers)))
+    end
+
+end
+
+
+#nodeLabels expects a list of node labels within suare brackets with no spaces seperated by commas
+function edgeFromMembers(g::Hypergraph, nodeLabels::String)
+    efm::Vector{Edge} = edgesWithLabels(g,stringWithinSB(nodeLabels))
+    if length(efm) == 1 return efm[1] end
+    if length(efm) == 0
+        printred("There are not edges with the provided members. These are the edges in the graph (can obtain with edgelist command)\n")
+        printEdgelist(g.edges)
+    else
+        printred("There are multiple edges with the provided members. These are the canidates\n")
+        printEdgelist(efm)
+    end
+    
+    return false
+    
+end
+
+function edgeLabelOrParse(g::Hypergraph, edgerepresentation::String)
+    #TODO go back and check other places that can take in an edge
+    
+end
+
+function outputGraphToTxt(g::Hypergraph, filename::String)
+
+    filenamesParts = ["nd","ndm","eg","egm"]
+    open(filename*"-nd.txt", "w") do file
+        writeString = ""
+        for node in g.nodes
+            nodeCoords = "$(node.xCoord),$(node.yCoord)"
+            writeString *= nodeCoords*"\n"
+        end
+        write(file,writeString[begin:end-1])
+    end
+    open(filename*"-ndm.txt", "w") do file
+        writeString = ""
+        for node in g.nodes
+            nodeMeta = "$(node.label) $(node.size) $(node.outlineColor) $(node.fillColor) $(node.labelColor)"
+            writeString *= nodeMeta*"\n"
+        end
+        write(file,writeString[begin:end-1])
+    end
+    open(filename*"-eg.txt", "w") do file
+        writeString = ""
+        for edge in g.edges
+            edgeMembers = ""
+            for node in edge.members
+                edgeMembers = edgeMembers*"$(node.label),"
+            end
+            writeString *= edgeMembers[begin:end-1]*"\n"
+        end
+        write(file,writeString[begin:end-1])
+    end
+    open(filename*"-egm.txt", "w") do file
+        writeString = ""
+        for edge in g.edges
+            edgeColor = "$(edge.color.r),$(edge.color.g),$(edge.color.b)"
+            edgeMeta = "$(edge.label) $edgeColor $(edge.lineWidth) $(edge.displayType) $(edge.hullSize)"
+            writeString *= edgeMeta*"\n"
+            
+        end
+        write(file,writeString[begin:end-1])
+    end
 end
 
 
