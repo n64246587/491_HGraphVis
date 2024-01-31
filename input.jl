@@ -183,7 +183,10 @@ function promptLoop()
 
             elseif commands[1] in edgelistAliases
                 if commandParts == 1 printEdgelist(G.edges) 
-                else printEdgelist(commands[1]) end
+                elseif contains(commands[2],"[") printEdgelist(edgesWithLabels(G,stringWithinSB(commands[2])))
+                else printEdgelist(edgesWithLabels(G,commands[2]))
+                end
+
 
             elseif commands[1] in setColorAliases
                 printred("IMPLIMENT THIS")#TODO

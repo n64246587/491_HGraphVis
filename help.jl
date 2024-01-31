@@ -44,7 +44,7 @@ const loadEdgeMetaAliases = [["meta"*i for i in loadEdgesAliases]; ["m"*i for i 
 const toggleAliases = ["toggle","tg"]
 const edgeModeAliases = ["edgemode","edges","em"]
 const setHulllRadiusAliases = ["buffer","hullsize","hullradius","setbuffer", "sethullsize", "sethullradius"]
-const edgelistAliases = ["edgelist","edges"]
+const edgelistAliases = ["edgelist","edges","neighborhood","neighbor"]
 const setColorAliases = ["setcolor","color"]
 const saveAliases = ["save","saveas"]
 

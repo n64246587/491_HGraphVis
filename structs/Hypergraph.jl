@@ -417,7 +417,12 @@ end
 
 function removeEdge(g::Hypergraph, label::String)
     #Removes the first edge it finds with the appropriate label
-    #
+    if contains(label,'[')
+        maybeedge = edgeFromMembers(g,label,false)
+        if maybeedge != false
+            label = maybeedge.label
+        end
+    end
     i = 1
     removeIndex = 0
     for edge in g.edges
@@ -427,9 +432,11 @@ function removeEdge(g::Hypergraph, label::String)
         end
         i+=1
     end
+
     if removeIndex != 0
         deleteat!(g.edges, removeIndex)
     else
+        
         printyellow("Provided edge label \"$label\"  does not exist in the graph. No edges deleted.\n")
     end
 
@@ -953,25 +960,24 @@ end
 
 
 #nodeLabels expects a list of node labels within suare brackets with no spaces seperated by commas
-function edgeFromMembers(g::Hypergraph, nodeLabels::String)
+function edgeFromMembers(g::Hypergraph, nodeLabels::String, prints::Bool=true)
     efm::Vector{Edge} = edgesWithLabels(g,stringWithinSB(nodeLabels))
     if length(efm) == 1 return efm[1] end
-    if length(efm) == 0
-        printred("There are not edges with the provided members. These are the edges in the graph (can obtain with edgelist command)\n")
-        printEdgelist(g.edges)
-    else
-        printred("There are multiple edges with the provided members. These are the canidates\n")
-        printEdgelist(efm)
+    if prints
+        if length(efm) == 0
+            ifprintred("There are not edges with the provided members. These are the edges in the graph (can obtain with edgelist command)\n")
+            printEdgelist(g.edges)
+        else
+            printred("There are multiple edges with the provided members. These are the canidates\n")
+            printEdgelist(efm)
+        end
     end
     
     return false
     
 end
 
-function edgeLabelOrParse(g::Hypergraph, edgerepresentation::String)
-    #TODO go back and check other places that can take in an edge
-    
-end
+
 
 function outputGraphToTxt(g::Hypergraph, filename::String)
 
