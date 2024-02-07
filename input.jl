@@ -1,7 +1,10 @@
-printstyled("Interactive Julia Hypergraph Visualizizer Starting.\nLoading Packages...\n",color=:green)
-
-include("./structs/Hypergraph.jl")
+printstyled("Interactive Julia Hypergraph Visualizizer Starting.\n",color=:green)
 include("./help.jl")
+printstyled("Please look at the Help Menu while you wait.\n",color=:green)
+allHelp()
+printstyled("Loading Packages...\n",color=:green)
+include("./structs/Hypergraph.jl")
+
 
 debug = false
 G = Hypergraph()
@@ -40,7 +43,7 @@ end
 function programExited()
     global intendedExit
     if intendedExit
-        printgreen("Program Exited Safely. Bye.")
+        printgreen("Program Exited Safely. Goodbye.")
     else
         printred("Program Exited Unexpectedly, potentially via Keyboard Interrupt.")
     end
@@ -94,27 +97,52 @@ function promptLoop()
             elseif commands[1] in moveAliases
                 moveCoord = 2
                 if "node" == commands[2] moveCoord = 3 end
-                nodeLabel = String(commands[moveCoord])
-                nodeToMove = findNodeWithLabel(G, nodeLabel)
-                if "to" == commands[moveCoord+1]
-                    xUnits = 0.0
-                    if commands[moveCoord+2] == "-"
-                        xUnits = nodeToMove.xCoord 
+                label = String(commands[moveCoord])
+                nodeToMove = findNodeWithLabel(G, label)
+                edgeToMove = findEdgeWithLabel(G, label)
+                if nodeToMove != false
+                    if "to" == commands[moveCoord+1]
+                        xUnits = 0.0
+                        if commands[moveCoord+2] == "-"
+                            xUnits = nodeToMove.xCoord 
+                        else
+                            xUnits = parse(Float64, commands[moveCoord+2])
+                        end
+                        yUnits = 0.0
+                        if commands[moveCoord+3] == "-"
+                            yUnits = nodeToMove.yCoord
+                        else
+                            yUnits = parse(Float64, commands[moveCoord+3])
+                        end
+                        
+                        moveNode(G, label, xUnits, yUnits)
                     else
-                        xUnits = parse(Float64, commands[moveCoord+2])
+                        xOrY = lowercase(commands[moveCoord+1]) 
+                        units = parse(Float64, commands[moveCoord+2])
+                        moveNode(G, nodeToMove, xOrY, units)
                     end
-                    yUnits = 0.0
-                    if commands[moveCoord+3] == "-"
-                        yUnits = nodeToMove.yCoord
+                elseif edgeToMove != false
+                    if "to" == commands[moveCoord+1]
+                        xUnits = 0.0
+                        if commands[moveCoord+2] == "-"
+                            xUnits = edgeToMove.edgeLabelX 
+                        else
+                            xUnits = parse(Float64, commands[moveCoord+2])
+                        end
+                        yUnits = 0.0
+                        if commands[moveCoord+3] == "-"
+                            yUnits = edgeToMove.edgeLabelY
+                        else
+                            yUnits = parse(Float64, commands[moveCoord+3])
+                        end
+                        
+                        moveEdge(G, label, xUnits, yUnits)
                     else
-                        yUnits = parse(Float64, commands[moveCoord+3])
+                        xOrY = lowercase(commands[moveCoord+1]) 
+                        units = parse(Float64, commands[moveCoord+2])
+                        moveEdge(G, edgeToMove, xOrY, units)
                     end
                     
-                    moveNode(G, nodeLabel, xUnits, yUnits)
-                else
-                    xOrY = lowercase(commands[moveCoord+1]) 
-                    units = parse(Float64, commands[moveCoord+2])
-                    moveNode(G, nodeToMove, xOrY, units)
                 end
             elseif commands[1] in layoutAliases
                 layoutType = lowercase(commands[2])
@@ -168,18 +196,55 @@ function promptLoop()
                 end
 
             elseif commands[1] in edgeModeAliases
-                if commands[2] in cliqueAliases
-                    G.displayType = 3
-                elseif commands[2] in bipartiteAliases
-                    G.displayType = 2
-                elseif commands[2] in convexAliases
-                    G.displayType = 1
-                else
-                    G.displayType = 0 #TODO make edge drawing edpendent on the edge
+                if commandParts == 2
+                    if commands[2] in cliqueAliases setAllEdgeMode(G,3)
+                    elseif commands[2] in bipartiteAliases setAllEdgeMode(G,2)
+                    elseif commands[2] in convexAliases setAllEdgeMode(G,1)
+                    elseif commands[2] in noEdgeTypeAliases setAllEdgeMode(G,0)
+                    end
+                elseif commandParts == 3
+                    edge = findEdgeWithLabel(G,commands[2])
+                    if edge != false
+                        if commands[3] in cliqueAliases edge.displayType = 3
+                        elseif commands[3] in bipartiteAliases edge.displayType = 2
+                        elseif commands[3] in convexAliases edge.displayType = 1
+                        elseif commands[3] in noEdgeTypeAliases edge.displayType = 0
+                        end
+                    else
+                        edge2 = edgeFromMembers(G, commands[2], false)
+                        if edge2 != false
+                            if commands[3] in cliqueAliases edge2.displayType = 3
+                            elseif commands[3] in bipartiteAliases edge2.displayType = 2
+                            elseif commands[3] in convexAliases edge2.displayType = 1
+                            elseif commands[3] in noEdgeTypeAliases edge2.displayType = 0
+                            end
+                        end
+                    end
                 end
+            elseif commands[1] in edgeFillAliases
+                if commandParts == 2 setAllEdgeFill(G, parse(Float64, commands[2])) 
+                elseif commandParts == 3
+                    fillValue = parse(Float64, commands[3])
+                    edge = findEdgeWithLabel(G,commands[2])
+                    if edge != false edge.fill = fillValue
+                    else
+                        edge2 = edgeFromMembers(G, commands[2], false)
+                        if edge2 != false edge2.fill = fillValue end
+                    end
+                end
+                
 
             elseif commands[1] in setHulllRadiusAliases
-                G.hullRad = parse(Float64, commands[2])
+                if commandParts == 2 setAllEdgeRad(G,parse(Float64, commands[2]))
+                elseif commandParts == 3
+                    hullValue = parse(Float64, commands[3])
+                    edge = findEdgeWithLabel(G,commands[2])
+                    if edge != false edge.hullSize = hullValue
+                    else
+                        edge2 = edgeFromMembers(G, commands[2], false)
+                        if edge2 != false edge2.hullSize = hullValue end
+                    end
+                end
 
             elseif commands[1] in edgelistAliases
                 if commandParts == 1 printEdgelist(G.edges) 
@@ -189,7 +254,33 @@ function promptLoop()
 
 
             elseif commands[1] in setColorAliases
-                printred("IMPLIMENT THIS")#TODO
+                #figure out the color
+                colorString = ""
+                colorantRep::RGB{Float64} 
+                if "[" in commands[4]
+                    #pasrse color
+                    r,g,b = [parse(Float64, i) for i in ssplit(stringWithinSB("[255,0,0]"),",")]
+                    colorantRep = RGB{}(r,g,b)
+                    colorString = getColorName(colorantRep)
+                    #convert from rgb to colorstring
+                else
+                    colorString = commands[4]
+                    colorantRep = parse(Colorant{Float64}, commands[4])
+                end
+                    
+                if commands[2] in nodeAlliases
+                    nodeToColor = findNodeWithLabel(G, label)
+                    nodeToColor.fillColor = colorString
+
+                elseif commands[2] in edgeAlliases
+                    
+                    edge = findEdgeWithLabel(G,commands[2])
+                    if edge != false edge.hullSize = hullValue
+                    else
+                        edge2 = edgeFromMembers(G, commands[2], false)
+                        if edge2 != false edge2.hullSize = hullValue end
+                    end
+                end
 
             elseif commands[1] in saveAliases
                 genericSave(commands[2])
@@ -215,6 +306,8 @@ function promptLoop()
 end
 
 atexit(programExited)
+displayGraph()
+printstyled("Finished loading packages.\nWelcome to the Interactive Hypergraph Visualizer.\n",color=:green)
 promptLoop() 
 intendedExit = true
 exit(0)

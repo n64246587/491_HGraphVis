@@ -22,16 +22,33 @@ mutable struct Hypergraph
     yMin::Float64
     yMax::Float64
 
-    hullRad::Float64
 
-    Hypergraph() = new(Edge[],Node[],3,false,true,false,Inf,-Inf,Inf,-Inf,0.25)
-    Hypergraph(e,n,dt,sT,sLa,sLe,xm,xM,ym,yM, hR) = new(e,n,dt,sT,sLa,sLe,xm,xM,ym,yM,hR)
-    Hypergraph(;edges::Vector{Edge}=Edge[],nodes::Vector{Node}=Node[],displayType::Int64=3,showTicks=false,showLabels=true,showLegend=false,xMin::Float64=Inf,xMax::Float64=-Inf,yMin::Float64=Inf,yMax::Float64=-Inf,hullRad::Float64=0.25) = new(edges,nodes,displayType,showTicks,showLabels,showLegend,xMin,xMax,yMin,yMax,hullRad) 
+
+    Hypergraph() = new(Edge[],Node[],3,false,true,false,Inf,-Inf,Inf,-Inf)
+    Hypergraph(e,n,dt,sT,sLa,sLe,xm,xM,ym,yM) = new(e,n,dt,sT,sLa,sLe,xm,xM,ym,yM)
+    Hypergraph(;edges::Vector{Edge}=Edge[],nodes::Vector{Node}=Node[],displayType::Int64=3,showTicks=false,showLabels=true,showLegend=false,xMin::Float64=Inf,xMax::Float64=-Inf,yMin::Float64=Inf,yMax::Float64=-Inf) = new(edges,nodes,displayType,showTicks,showLabels,showLegend,xMin,xMax,yMin,yMax) 
     
 end
+function setAllEdgeMode(g::Hypergraph,edgemode::Int64)
+    for edge in g.edges edge.displayType = edgemode end
+end
+
+function setAllEdgeFill(g::Hypergraph,edgefill::Float64)
+    for edge in g.edges edge.fill = edgefill end
+end
+
+function setAllEdgeRad(g::Hypergraph,hullSize::Float64)
+    for edge in g.edges edge.hullSize = hullSize end
+end
+
 
 function findNodeIndexfromLabel(g::Hypergraph,label::String)
-    for node in 1:length(g.nodes) if g.nodes[node].label == label return node end end
+    for node in 1:length(g.nodes) if lowercase(g.nodes[node].label) == label return node end end
+    return false
+end
+
+function findEdgeIndexfromLabel(g::Hypergraph,label::String)
+    for edge in 1:length(g.edges) if lowercase(g.edges[edge].label) == label return edge end end
     return false
 end
 
@@ -46,17 +63,17 @@ function findEdgeWithColor(g::Hypergraph,color::RGB{Float64})
 end
 
 function findNodeWithLabel(g::Hypergraph,label::String)
-    for node in g.nodes if node.label == label return node end end
+    for node in g.nodes if lowercase(node.label) == label return node end end
     return false
 end
 
 function findEdgeWithLabel(g::Hypergraph,label::String)
-    for edge in g.edges if edge.label == label return edge end end
+    for edge in g.edges if lowercase(edge.label) == label return edge end end
     return false
 end
 
 # returns the true if an edge with this label is found
-function doesEdgeLabelExist(g::Hypergraph,label::String)
+function doesEdgeLabelExist(g::Hypergraph,label::String)::Bool
     for edge in g.edges if edge.label == label return true end end
     return false
 end
@@ -92,22 +109,21 @@ function moveNode(g::Hypergraph, node::Node, xUnits::Float64, yUnits::Float64)
     setGraphLimits(g)
 end
 
-function moveNode(g::Hypergraph, node::Node, dir::String, units::Float64)
-    if (dir == "left" || dir == "l")
-        node.xCoord -= units 
-    
-    elseif (dir == "right" || dir == "x" ||  dir == "r")
-        node.xCoord += units
-    
-    elseif (dir == "up" || dir == "y" ||  dir == "u")
-        node.yCoord += units     
-    
-    elseif (dir == "down" || dir == "d")
-        node.yCoord -= units
-    else
-        print("Invalid Direction in moveNode")
-    end
+function moveEdge(g::Hypergraph, edge::Edge, dir::String, units::Float64)
+    if (dir == "left" || dir == "l") edge.edgeLabelX -= units 
+    elseif (dir == "right" || dir == "x" ||  dir == "r") edge.edgeLabelX += units
+    elseif (dir == "up" || dir == "y" ||  dir == "u") edge.edgeLabelY += units
+    elseif (dir == "down" || dir == "d") edge.edgeLabelY -= units
+    else print("Invalid Direction in moveEdge") end
+    setGraphLimits(g)
+end
 
+function moveNode(g::Hypergraph, node::Node, dir::String, units::Float64)
+    if (dir == "left" || dir == "l") node.xCoord -= units 
+    elseif (dir == "right" || dir == "x" ||  dir == "r") node.xCoord += units
+    elseif (dir == "up" || dir == "y" ||  dir == "u") node.yCoord += units
+    elseif (dir == "down" || dir == "d") node.yCoord -= units
+    else print("Invalid Direction in moveNode") end
     setGraphLimits(g)
 end
 
@@ -120,24 +136,34 @@ function moveNode(g::Hypergraph, label::String, xUnits::Float64, yUnits::Float64
     setGraphLimits(g)
 end
 
+function moveEdge(g::Hypergraph, label::String, xUnits::Float64, yUnits::Float64)
+    edge = findEdgeWithLabel(g, label)
+
+    edge.edgeLabelX = xUnits
+    edge.edgeLabelY = yUnits
+
+    setGraphLimits(g)
+end
+
 function moveNode(g::Hypergraph, label::String, dir::String, units::Float64)
     index = findNodeIndexFromLabel(g, label)
+    if (dir == "left" || dir == "l") g.nodes[index].xCoord -= units 
+    elseif (dir == "right" || dir == "x" ||  dir == "r") g.nodes[index].xCoord += units
+    elseif (dir == "up" || dir == "y" ||  dir == "u") g.nodes[index].yCoord += units
+    elseif (dir == "down" || dir == "d") g.nodes[index].yCoord -= units
+    else print("Invalid Direction in moveNode") end
+    setGraphLimits(g)
+end
 
-    if (dir == "left" || dir == "l")
-        g.nodes[index].xCoord -= units 
-    
-    elseif (dir == "right" || dir == "x" ||  dir == "r")
-        g.nodes[index].xCoord += units
-    
-    elseif (dir == "up" || dir == "y" ||  dir == "u")
-        g.nodes[index].yCoord += units     
-    
-    elseif (dir == "down" || dir == "d")
-        g.nodes[index].yCoord -= units
-    else
-        print("Invalid Direction in moveNode")
+function moveEdge(g::Hypergraph, label::String, dir::String, units::Float64)
+    index = findEdgeIndexFromLabel(g, label)
+
+    if (dir == "left" || dir == "l") g.edges[index].edgeLabelX -= units 
+    elseif (dir == "right" || dir == "x" ||  dir == "r") g.edges[index].edgeLabelX += units
+    elseif (dir == "up" || dir == "y" ||  dir == "u") g.edges[index].edgeLabelY += units     
+    elseif (dir == "down" || dir == "d") g.edges[index].edgeLabelY -= units
+    else print("Invalid Direction in moveNode")
     end
-
     setGraphLimits(g)
 end
 
@@ -203,14 +229,20 @@ function makePlot(g::Hypergraph)::Plots.Plot{Plots.GRBackend}
 
     graphPlot = plot()
     k = 0.25
+    changeinX = g.xMax - g.xMin
+    changeinY = g.yMax - g.yMin
 
-    deltaX = (g.xMax - g.xMin) * k
-    deltaY = (g.yMax - g.yMin) * k
+    deltaX = changeinX * k
+    deltaY = changeinY * k
+    halfSideLength =  changeinX>changeinY ? (changeinX+deltaX)/2 : (changeinY+deltaY)/2
+    centerX = (g.xMax + g.xMin) / 2
+    centerY = (g.yMax + g.yMin) / 2
     
-    plot!(graphPlot, xlim = [g.xMin - deltaX,g.xMax + deltaX], ylim = [g.yMin - deltaY, g.yMax + deltaY])
-    #plot!(graphPlot, aspect_ratio=:equal)
+    plot!(graphPlot, xlim = [centerX - halfSideLength,centerX + halfSideLength], ylim = [centerY- halfSideLength, centerY + halfSideLength])
+    plot!(graphPlot, aspect_ratio=:equal) #let the aspect ratio always be equal, requested by Dr. Veldt
     plot!(graphPlot, grid = g.showTicks, legend = g.showLegend)
     plot!(graphPlot, axis = g.showTicks, xticks = g.showTicks, yticks = g.showTicks) 
+
 
     if isempty(g.nodes)
         return graphPlot
@@ -241,39 +273,43 @@ function makePlot(g::Hypergraph)::Plots.Plot{Plots.GRBackend}
     for currEdge in g.edges
         la = 1
         ms = 10
-        alp = .1
+        alp = .0
         ms = 1
 
-        if g.displayType == 1
+        if currEdge.displayType == 1
             
-            H = hyperedgehull(currEdge, g.hullRad)
-            plot!(graphPlot,VPolygon(H),alpha = alp,linewidth = currEdge.lineWidth, markerstrokewidth = ms, linecolor = currEdge.color,linealpha = la, label=currEdge.label)
-        elseif g.displayType == 2
-            #find centroid of poiints 
-            xCenter::Float64 = 0.0
-            yCenter::Float64 = 0.0
-            for node in currEdge.members
-                xCenter += node.xCoord
-                yCenter += node.yCoord
+            H = hyperedgehull(currEdge, currEdge.hullSize)
+            plot!(graphPlot,VPolygon(H),alpha = currEdge.fill,linewidth = currEdge.lineWidth, markerstrokewidth = ms, linecolor = currEdge.color,linealpha = la, label=currEdge.label)
+        elseif currEdge.displayType == 2
+            #find centroid of poiints
+            if currEdge.edgeLabelX == Inf && currEdge.edgeLabelY == Inf 
+                xCenter::Float64 = 0.0
+                yCenter::Float64 = 0.0
+                for node in currEdge.members
+                    xCenter += node.xCoord
+                    yCenter += node.yCoord
+                end
+                xCenter /= length(currEdge.members)
+                yCenter /= length(currEdge.members)
+                currEdge.edgeLabelX = xCenter
+                currEdge.edgeLabelY = yCenter
             end
-            xCenter /= length(currEdge.members)
-            yCenter /= length(currEdge.members)
+            #println("$(currEdge.label) $(currEdge.edgeLabelX) $(currEdge.edgeLabelY)")
 
             for node in currEdge.members
-                plot!(graphPlot,[xCenter; node.xCoord], [yCenter; node.yCoord],color = currEdge.color, linewidth = currEdge.lineWidth)
+                plot!(graphPlot,[currEdge.edgeLabelX; node.xCoord], [currEdge.edgeLabelY; node.yCoord],color = currEdge.color, linewidth = currEdge.lineWidth)
             end
             
 
-            scatter!(graphPlot, [xCenter], [yCenter], alpha = alp, markersize =10, markershape = :rect, color = currEdge.color, markerstrokecolor = currEdge.color)
-            annotate!(graphPlot, xCenter, yCenter, text(currEdge.label, plot_font, txtsize, color="black"))
-        elseif g.displayType == 3
+            scatter!(graphPlot, [currEdge.edgeLabelX], [currEdge.edgeLabelX], alpha = alp, markersize =10, markershape = :rect, color = currEdge.color, markerstrokecolor = currEdge.color)
+            annotate!(graphPlot, currEdge.edgeLabelX, currEdge.edgeLabelY, text(currEdge.label, plot_font, txtsize, color="black"))
+        elseif currEdge.displayType == 3
             for S in 1:length(currEdge.members)-1
                 nodeS = currEdge.members[S]
                 for D in S+1:length(currEdge.members)
                     nodeD = currEdge.members[D]
                     plot!(graphPlot,[nodeS.xCoord; nodeD.xCoord], [nodeS.yCoord; nodeD.yCoord],color = currEdge.color, linewidth = currEdge.lineWidth)
                 end
-                
             end
         end
     end
@@ -1020,6 +1056,8 @@ function outputGraphToTxt(g::Hypergraph, filename::String)
         write(file,writeString[begin:end-1])
     end
 end
+
+
 
 
 Base.:(==)(c1::Hypergraph, c2::Hypergraph) = 

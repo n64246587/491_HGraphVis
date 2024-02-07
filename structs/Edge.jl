@@ -7,12 +7,16 @@ mutable struct Edge
     members::Vector{Node}
     color::RGB{Float64}
     lineWidth::Float64
-    displayType::Int64
+    displayType::Int64 #1 is for hull #2  is for bipartite # 3 is for clique
     hullSize::Float64
+    #must make a edgeLabelX and edgeLabelY for bipartite mode
+    edgeLabelX::Float64
+    edgeLabelY::Float64
+    fill::Float64
 
-    Edge() = new("",Node[],RGB{Float64}(0.0,0.0,0.0),1.0,3,0.25)
-    Edge(l,m,c,lw,dt,hs) = new(l,m,c,lw,dt,hs)
-    Edge(;l="",m=Node[],c=RGB{Float64}(0.0,0.0,0.0),lw=1.0,dt=3,hs=0.25) = new(l,m,c,lw,dt,hs)
+    Edge() = new("",Node[],RGB{Float64}(0.0,0.0,0.0),1.0,3,0.25,Inf,Inf,0.0)
+    Edge(l,m,c,lw,dt,hs,elX,elY,ef) = new(l,m,c,lw,dt,hs,elX,elY,ef)
+    Edge(;l="",m=Node[],c=RGB{Float64}(0.0,0.0,0.0),lw=1.0,dt=3,hs=0.25,elX=Inf,elY=Inf,ef=0.0) = new(l,m,c,lw,dt,hs,elX,elY,ef)
 end
 
 function parseEdge(lineArgs::Vector{String})::Edge
@@ -73,10 +77,19 @@ function circlepoints(centerX,centerY,radius,pts = 100)
         return H
     end
 
-#dictionary does not have every color nametoColorDict#might have to load color by some other metric like RGB values in the text file
+#dictionary does not have every color nametoColorDict #might have to load color by some other metric like RGB values in the text file
 function getColorName(c::RGB{Float64})::String
-    colorRep::Tuple{Int64, Int64, Int64} = (Int64(round(c.r*255)), Int64(round(c.g*255)), Int64(round(c.b*255)))
-    return nametoColorDict[colorRep]
+    minColorDistance = Inf
+    colorString = "black"
+    for color in nametoColorDict     
+        colorDist = ((c.r-color.first[1])^2+(c.g-color.first[2])^2+(c.b-color.first[3])^2)^1/2                                                                                                                                       
+        if colorDist < 
+            minColorDistance minColorDistance= colorDist
+            colorString = color.second
+        end
+    end
+    
+    return colorString
 end
 
 
