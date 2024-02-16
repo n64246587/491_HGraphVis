@@ -13,6 +13,20 @@ mutable struct Node
     Node(;label="", size=10, outlineColor="black", fillColor="white", labelColor="black", xCoord=0., yCoord=0.) = new(label, size, outlineColor, fillColor, labelColor, xCoord, yCoord)
     Node(n::Node) = new(n.label, n.size, n.outlineColor, n.fillColor, n.labelColor, n.xCoord, n.yCoord)
 end
+function updateNodeColor(n::Node, fc::String, oc::String, lc::String)
+    if (fc != "")
+        n.fillColor = fc
+    end
+
+    if (oc != "")
+        n.outlineColor = oc
+    end
+
+    if (lc != "")
+        n.labelColor = lc
+    end
+end
+
 
 # Parses a node based on vac file commands
 function parseNode(lineArgs::Vector{String})::Node
@@ -64,3 +78,11 @@ c1.fillColor == c2.fillColor &&
 c1.labelColor == c2.labelColor && 
 c1.xCoord == c2.xCoord && 
 c1.yCoord == c2.yCoord
+
+function Base.:show(io::IO, n::Node) 
+    s =  "Node Label: $(n.label)\n"
+    s *= "Node Size: $(n.size)\n"
+    s *= "Node Colors: Outline:$(n.outlineColor), Fill:$(n.fillColor), Label:$(n.labelColor)\n"
+    s *= "Node Coords: ($(n.xCoord),$(n.yCoord))\n"
+    print(io,s)
+end

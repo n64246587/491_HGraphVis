@@ -1,5 +1,5 @@
 include("./Node.jl")
-using LazySets,Plots,KrylovKit,SparseArrays
+using LazySets,Plots,KrylovKit,SparseArrays,Images
 
 nametoColorDict = Dict(value => key for (key, value) in Colors.color_names)
 mutable struct Edge

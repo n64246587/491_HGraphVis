@@ -172,9 +172,9 @@ function promptLoop()
                 end
             elseif commands[1] in loadAliases
                 if commands[2] in loadNodesAliases
-                    loadxy(G,commands[3])
+                    loadnodes(G,commands[3])
                 elseif commands[2] in loadEdgesAliases
-                    loadhgraph(G,commands[3])
+                    loadedges(G,commands[3])
                     #TODO loading edges after nodes loses xy coords
                 elseif commands[2] in loadNodeMetaAliases
 
@@ -248,7 +248,7 @@ function promptLoop()
 
             elseif commands[1] in edgelistAliases
                 if commandParts == 1 printEdgelist(G.edges) 
-                elseif contains(commands[2],"[") printEdgelist(edgesWithLabels(G,stringWithinSB(commands[2])))
+                elseif '[' in commands[2] printEdgelist(edgesWithLabels(G,stringWithinSB(commands[2])))
                 else printEdgelist(edgesWithLabels(G,commands[2]))
                 end
 
@@ -256,10 +256,10 @@ function promptLoop()
             elseif commands[1] in setColorAliases
                 #figure out the color
                 colorString = ""
-                colorantRep::RGB{Float64} 
-                if "[" in commands[4]
+                colorantRep = RGB{}
+                if '[' in commands[4]
                     #pasrse color
-                    r,g,b = [parse(Float64, i) for i in ssplit(stringWithinSB("[255,0,0]"),",")]
+                    r,g,b = [parse(Float64, i) for i in ssplit(stringWithinSB(commands[4]),",")]
                     colorantRep = RGB{}(r,g,b)
                     colorString = getColorName(colorantRep)
                     #convert from rgb to colorstring
@@ -269,21 +269,37 @@ function promptLoop()
                 end
                     
                 if commands[2] in nodeAlliases
-                    nodeToColor = findNodeWithLabel(G, label)
-                    nodeToColor.fillColor = colorString
+                    # nodeToColor = findNodeWithLabel(G, commands[3])
+                    # nodeToColor.fillColor = colorString
+                    ind = findNodeIndexfromLabel(G,commands[3])
+                    if (ind != -1) updateNodeColor(G.nodes[ind], colorString, colorString, "") end
 
                 elseif commands[2] in edgeAlliases
                     
-                    edge = findEdgeWithLabel(G,commands[2])
-                    if edge != false edge.hullSize = hullValue
+                    edge = findEdgeWithLabel(G,commands[3])
+                    if edge != false edge.color = colorantRep
                     else
-                        edge2 = edgeFromMembers(G, commands[2], false)
-                        if edge2 != false edge2.hullSize = hullValue end
+                        edge2 = edgeFromMembers(G, commands[3], false)
+                        if edge2 != false edge2.color = colorantRep 
+                        else
+                            printyellow("Edge with label $(commands[3]) not found.")
+                        end
                     end
                 end
 
             elseif commands[1] in saveAliases
                 genericSave(commands[2])
+
+            elseif commands[1] in backgroundAliases
+                global bgPath
+                global bgSet
+                if commandParts == 1 
+                    bgPath = ""
+                elseif commandParts == 2
+                    bgPath = commands[2]
+                end
+
+                bgSet = false
 
 
             else 
@@ -291,8 +307,8 @@ function promptLoop()
                 continue
             end
            
-        setGraphLimits(G)
-        displayGraph()
+            setGraphLimits(G)
+            displayGraph()
 
         catch e
             printred("Problem in promptLoop of input.jl\nPlease watch your syntax. Try `help` if you need.\n")

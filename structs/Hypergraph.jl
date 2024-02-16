@@ -8,6 +8,10 @@ printyellow(s::String) = printstyled(s,color=:yellow)
 ssplit(s::String,delim::String=" ")::Vector{String} = [lowercase(String(i)) for i in split(strip(s), delim)] 
 stringWithinSB(s::String)::String = String(s[findfirst('[',s)+1:findfirst(']',s)-1])
 
+bgPath::String = ""
+bgSet::Bool = false
+bgImg = load("rec1.png")
+
 mutable struct Hypergraph
     edges::Vector{Edge}
     nodes::Vector{Node}
@@ -24,9 +28,9 @@ mutable struct Hypergraph
 
 
 
-    Hypergraph() = new(Edge[],Node[],3,false,true,false,Inf,-Inf,Inf,-Inf)
+    Hypergraph() = new(Edge[],Node[],1,false,true,false,Inf,-Inf,Inf,-Inf)
     Hypergraph(e,n,dt,sT,sLa,sLe,xm,xM,ym,yM) = new(e,n,dt,sT,sLa,sLe,xm,xM,ym,yM)
-    Hypergraph(;edges::Vector{Edge}=Edge[],nodes::Vector{Node}=Node[],displayType::Int64=3,showTicks=false,showLabels=true,showLegend=false,xMin::Float64=Inf,xMax::Float64=-Inf,yMin::Float64=Inf,yMax::Float64=-Inf) = new(edges,nodes,displayType,showTicks,showLabels,showLegend,xMin,xMax,yMin,yMax) 
+    Hypergraph(;edges::Vector{Edge}=Edge[],nodes::Vector{Node}=Node[],displayType::Int64=1,showTicks=false,showLabels=true,showLegend=false,xMin::Float64=Inf,xMax::Float64=-Inf,yMin::Float64=Inf,yMax::Float64=-Inf) = new(edges,nodes,displayType,showTicks,showLabels,showLegend,xMin,xMax,yMin,yMax) 
     
 end
 function setAllEdgeMode(g::Hypergraph,edgemode::Int64)
@@ -129,19 +133,15 @@ end
 
 function moveNode(g::Hypergraph, label::String, xUnits::Float64, yUnits::Float64)
     node = findNodeWithLabel(g, label)
-
     node.xCoord = xUnits
     node.yCoord = yUnits
-
     setGraphLimits(g)
 end
 
 function moveEdge(g::Hypergraph, label::String, xUnits::Float64, yUnits::Float64)
     edge = findEdgeWithLabel(g, label)
-
     edge.edgeLabelX = xUnits
     edge.edgeLabelY = yUnits
-
     setGraphLimits(g)
 end
 
@@ -157,7 +157,6 @@ end
 
 function moveEdge(g::Hypergraph, label::String, dir::String, units::Float64)
     index = findEdgeIndexFromLabel(g, label)
-
     if (dir == "left" || dir == "l") g.edges[index].edgeLabelX -= units 
     elseif (dir == "right" || dir == "x" ||  dir == "r") g.edges[index].edgeLabelX += units
     elseif (dir == "up" || dir == "y" ||  dir == "u") g.edges[index].edgeLabelY += units     
@@ -226,7 +225,9 @@ end
 
 # This function returns a plot object containing the visualization of the graph object g
 function makePlot(g::Hypergraph)::Plots.Plot{Plots.GRBackend} 
-
+    global bgSet
+    global bgPath
+    global bgImg
     graphPlot = plot()
     k = 0.25
     changeinX = g.xMax - g.xMin
@@ -237,17 +238,39 @@ function makePlot(g::Hypergraph)::Plots.Plot{Plots.GRBackend}
     halfSideLength =  changeinX>changeinY ? (changeinX+deltaX)/2 : (changeinY+deltaY)/2
     centerX = (g.xMax + g.xMin) / 2
     centerY = (g.yMax + g.yMin) / 2
+    #plot bg image
+    
+    # if bgPath != ""
+    #     if bgSet == false
+    #         try
+    #             bgImg = load(bgPath)
+    #             bgSet = true
+    #         catch
+    #             printyellow("Image could not be loaded.")
+    #             bgSet = false
+    #         end
+    #     end
+    #     if bgSet == true
+    #         plot!(graphPlot,bgImg)
+    #     end
+    # end
+
+    # if bgSet == false
+    #     plot!(graphPlot,bgImg)
+    #     bgSet = true
+    # end
+    
+
     
     plot!(graphPlot, xlim = [centerX - halfSideLength,centerX + halfSideLength], ylim = [centerY- halfSideLength, centerY + halfSideLength])
     plot!(graphPlot, aspect_ratio=:equal) #let the aspect ratio always be equal, requested by Dr. Veldt
     plot!(graphPlot, grid = g.showTicks, legend = g.showLegend)
     plot!(graphPlot, axis = g.showTicks, xticks = g.showTicks, yticks = g.showTicks) 
-
-
+    
+    
     if isempty(g.nodes)
         return graphPlot
     end
-
     n = length(g.nodes)
     xy = zeros(n,2)
     #edges = Vector{Vector{Int64}}()
@@ -274,13 +297,13 @@ function makePlot(g::Hypergraph)::Plots.Plot{Plots.GRBackend}
         la = 1
         ms = 10
         alp = .0
-        ms = 1
+        #ms = 1
 
-        if currEdge.displayType == 1
+        if currEdge.displayType == 1 #hull mode
             
             H = hyperedgehull(currEdge, currEdge.hullSize)
             plot!(graphPlot,VPolygon(H),alpha = currEdge.fill,linewidth = currEdge.lineWidth, markerstrokewidth = ms, linecolor = currEdge.color,linealpha = la, label=currEdge.label)
-        elseif currEdge.displayType == 2
+        elseif currEdge.displayType == 2 #bipartite mode
             #find centroid of poiints
             if currEdge.edgeLabelX == Inf && currEdge.edgeLabelY == Inf 
                 xCenter::Float64 = 0.0
@@ -300,10 +323,10 @@ function makePlot(g::Hypergraph)::Plots.Plot{Plots.GRBackend}
                 plot!(graphPlot,[currEdge.edgeLabelX; node.xCoord], [currEdge.edgeLabelY; node.yCoord],color = currEdge.color, linewidth = currEdge.lineWidth)
             end
             
-
-            scatter!(graphPlot, [currEdge.edgeLabelX], [currEdge.edgeLabelX], alpha = alp, markersize =10, markershape = :rect, color = currEdge.color, markerstrokecolor = currEdge.color)
             annotate!(graphPlot, currEdge.edgeLabelX, currEdge.edgeLabelY, text(currEdge.label, plot_font, txtsize, color="black"))
-        elseif currEdge.displayType == 3
+            scatter!(graphPlot, [currEdge.edgeLabelX], [currEdge.edgeLabelY], alpha = 1.0, markersize =10, markershape = :rect, color = currEdge.color, markerstrokecolor = currEdge.color)
+            
+        elseif currEdge.displayType == 3 # clique mode
             for S in 1:length(currEdge.members)-1
                 nodeS = currEdge.members[S]
                 for D in S+1:length(currEdge.members)
@@ -316,14 +339,16 @@ function makePlot(g::Hypergraph)::Plots.Plot{Plots.GRBackend}
 
     
     #Plot the xy circles and node labels
+    #graphPlot = plot()
+    # all nodes are updating if and only if the last node is updating
     for currNode in g.nodes
-
-        scatter!(graphPlot, xy[:,1], xy[:,2], markersize = currNode.size, color = currNode.fillColor, markerstrokecolor = currNode.outlineColor, label="")
-        
+        scatter!(graphPlot, [currNode.xCoord], [currNode.yCoord] ,markershape = :circle ,  markersize = currNode.size, color = currNode.fillColor , markerstrokecolor = currNode.outlineColor,ma=1.0)
         if (g.showLabels == true)
             annotate!(graphPlot, currNode.xCoord, currNode.yCoord, text(currNode.label, plot_font, txtsize, color=currNode.labelColor))
         end
+        
     end
+    
 
     return graphPlot
 end
@@ -425,8 +450,8 @@ function removeNode(g::Hypergraph, label::String)
 
 end
 
-function addEdge(g::Hypergraph, label::String, mems = Node[],color = RGB{Float64}(0.0,0.0,0.0) ,linew = 1.0)
-    newEdge = Edge(label, mems, color,linew)
+function addEdge(g::Hypergraph, label::String, mems = Node[],color = RGB{Float64}(0.0,0.0,0.0) ,linew = 1.0, displayT=1, hullS = 0.25,eX =Inf, eY = Inf, fill =0.0)
+    newEdge = Edge(label, mems, color,linew,displayT,hullS,eX,eY,fill)
     #check for duplicate labels
     badEdgeLabel = false
     i = 64
@@ -849,7 +874,7 @@ function emptyGraph!(g::Hypergraph)
 end
 
 ##loaders
-function loadxy(g::Hypergraph,filepath::String)
+function loadnodes(g::Hypergraph,filepath::String)
     #xy::Matrix{Float64} = zeros(Float64)
     numNodes = length(g.nodes)
     #xy::Matrix{Float64} = zeros(Float64,numNodes,2)
@@ -887,9 +912,9 @@ function loadxy(g::Hypergraph,filepath::String)
 
     end
 end
-function loadhgraph(g::Hypergraph,filepath::String)
+function loadedges(g::Hypergraph,filepath::String)
     #emptyGraph!(g)
-    numNodes = length(g.nodes)
+
     lines = []
     try 
         open(filepath) do file 
@@ -928,9 +953,114 @@ function loadhgraph(g::Hypergraph,filepath::String)
     end
 
 end
-function loadall(g::Hypergraph, graphfilepath::String, xyfilepath::String)
-    loadhgraph(g,graphfilepath)
-    loadxy(g,xyfilepath)
+function loadnodesmeta(g::Hypergraph,filepath::String)
+    numNodes = length(g.nodes)
+    lines = []
+    try 
+        open(filepath) do file 
+            lines = [i for i in readlines(file) if i != ""] 
+        end
+    catch 
+        println(filepath, " could not be loaded.")  
+        return 
+    end
+    numLines = length(lines) 
+    if numNodes != 0 && numNodes != length(lines) 
+        printyellow("There are $numNodes nodes and $numLines lines in the file.\nCannot assigne nodes metadate from this file. \n")  
+        return
+    end
+    #if there are no nodes create the nodes at 0,0 with this metadata
+    if numNodes == 0
+        for i in 1:numLines
+            #$(node.label) $(node.size) $(node.outlineColor) $(node.fillColor) $(node.labelColor)"
+            lineArgs = ssplit(lines[i])
+            nodeSize = parse(Int64,lineArgs[2])
+            newNode = Node(label=lineArgs[1], size=nodeSize, outlineColor=lineArgs[3], fillColor=lineArgs[4], labelColor=lineArgs[5])
+            badNodeLabel = false
+            i = 0
+            while (newNode.label == "") || doesNodeLabelExist(g,newNode.label)
+                i = i+1 
+                newNode.label = string(i)
+                badNodeLabel = true
+            end
+            push!(g.nodes,newNode)
+        end
+    else
+        for nodeNum in 1:numNodes
+            lineArgs = ssplit(lines[nodeNum])
+            nodeSize = parse(Int64,lineArgs[2])
+            g.nodes[nodeNum].label = lineArgs[1]
+            g.nodes[nodeNum].size = nodeSize
+            g.nodes[nodeNum].outlineColor=lineArgs[3]
+            g.nodes[nodeNum].fillColor=lineArgs[4]
+            g.nodes[nodeNum].labelColor=lineArgs[5]
+        end
+
+    end
+
+
+end
+
+function loadedgesmeta(g::Hypergraph,filepath::String)
+    lines = []
+    try 
+        open(filepath) do file 
+            lines = [i for i in readlines(file) if i != ""] 
+        end
+    catch 
+        println(filepath, " could not be loaded.")  
+        return 
+    end
+    #edgeColor = "$(edge.color.r),$(edge.color.g),$(edge.color.b)"
+    #edgeMeta = "$(edge.label) $edgeColor $(edge.lineWidth) $(edge.displayType) $(edge.hullSize) $(edge.edgeLabelX) $(edge.edgeLabelY) $(edge.fill)"
+    
+    #TODO finish load edge metadata
+    for edge in lines
+        newEdge = Edge()
+        #check for duplicate labels
+        badEdgeLabel = false
+        i = 64
+        while (newEdge.label == "") || doesEdgeLabelExist(g,newEdge.label)
+            i = i+1 
+            newEdge.label = string(Char(i))
+            badEdgeLabel = true
+        end
+        #check for duplicate colors
+        i = 0
+        while (newEdge.color == RGB{Float64}(0.0,0.0,0.0)) || doesEdgeColorExist(g,newEdge.color)
+            i = i+1 
+            newEdge.color = cp[i]
+        end
+        #looks for nodes by label (node is actually a node label here)
+        for nodeLabel in [string(i) for i in split(edge,",")]
+            maybeNode = findNodeWithLabel(g,nodeLabel)
+            if maybeNode == false
+                push!(newEdge.members,addNode(g,nodeLabel))
+            else
+                push!(newEdge.members,maybeNode)
+            end
+        end
+        push!(g.edges,newEdge)
+    end
+
+end
+
+
+
+
+function loadall(g::Hypergraph, graphfilepath::String, xyfilepath::String, graphmetafilepath::String, xymetafilepath::String)
+    loadedges(g,graphfilepath)
+    loadnodes(g,xyfilepath)
+    loadedges(g,graphmetafilepath)
+    loadnodes(g,xymetafilepath)
+end
+#TODO make a better version of this function
+function loadall(g::Hypergraph, allPath::String)
+    allPathRoot = allPath[begin:end-4]
+    loadedges(g,allPathRoot*"-eg.txt")
+    loadnodes(g,allPathRoot*"-nd.txt")
+    loadedgesmeta(g,allPathRoot*"-egm.txt")
+    loadnodesmeta(g,allPathRoot*"-ndm.txt")
 end
 
 function parseEdgeExpression(g::Hypergraph,nodeLabels::String)::Edge
@@ -997,6 +1127,7 @@ end
 
 #nodeLabels expects a list of node labels within suare brackets with no spaces seperated by commas
 function edgeFromMembers(g::Hypergraph, nodeLabels::String, prints::Bool=true)
+    if !('[' in nodeLabels  && ']' in nodeLabels) return false end
     efm::Vector{Edge} = edgesWithLabels(g,stringWithinSB(nodeLabels))
     if length(efm) == 1 return efm[1] end
     if prints
@@ -1049,7 +1180,7 @@ function outputGraphToTxt(g::Hypergraph, filename::String)
         writeString = ""
         for edge in g.edges
             edgeColor = "$(edge.color.r),$(edge.color.g),$(edge.color.b)"
-            edgeMeta = "$(edge.label) $edgeColor $(edge.lineWidth) $(edge.displayType) $(edge.hullSize)"
+            edgeMeta = "$(edge.label) $edgeColor $(edge.lineWidth) $(edge.displayType) $(edge.hullSize) $(edge.edgeLabelX) $(edge.edgeLabelY) $(edge.fill)"
             writeString *= edgeMeta*"\n"
             
         end
