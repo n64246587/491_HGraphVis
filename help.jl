@@ -16,7 +16,7 @@ const moveHelp =      "|    Move    |     Move the node with label `nodelabel` d
                       "|    Move    |    Move the node with label `nodelabel` in the specified diirection by `value` units  |  move {node} `nodeLabel` [up/down/left/right] `value`  |"
 const layoutHelp=     "|   Layout   |             Applies the specified layout to the xy coordinates of all nodes           |            layout [force,spectral,circle]              |"
 const toggleHelp =    "|   Toggle   |               Turns on or off the specified feature of the visualization              |              toggle [grid, label, legend]              |"
-const loadHelp =      "|    Load    |     Load the text file `filepath.txt` which will override the current session data    |   load [nodes/edges/nodemeta/edgemeta] `filepath.txt`  |"
+const loadHelp =      "|    Load    |     Load the text file `filepath.txt` which will override the current session data    | load [nodes/edges/nodemeta/edgemeta/all] `filepath.txt`|"
 const edgeModeHelp=   "|  Edgemode  |    Specify how the edge with label `edgeLabel` or all hyperedges should be rendered   |  edgemode {`edgeLabel`} [none/clique/bipartite/convex] |"
 const hullSizeHelp=   "|  Hullsize  |    Set the hullsize in convex mode of the edge with label `edgeLabel` or all edges    |        hullsize {`edgeLabel`} `hullsize`=0.25          |"
 const edgelistHelp=   "|  Edgelist  |  List all edges. If `node` is given, will only list edges with that node as a member  |                   edgelist {`node`}                    |"
@@ -43,6 +43,7 @@ const moveAliases = ["move","mv"]
 const layoutAliases = ["layout"]
 
 const loadAliases = ["load"]
+const loadAllAliases = ["all","a","ne","en","full","src","source"]
 const loadNodesAliases = ["nodes", "node", "coord", "coords", "xy", "xys"]
 const loadEdgesAliases = ["edges","edge","graph","hypergraph","g","hg"]
 const loadNodeMetaAliases = [["meta"*i for i in loadNodesAliases]; ["m"*i for i in loadNodesAliases]]

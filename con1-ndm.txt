@@ -1,0 +1,8 @@
+1 10 green green black
+2 10 green green black
+3 10 green green black
+4 10 purple purple black
+5 10 purple purple black
+6 10 purple purple black
+7 10 purple purple black
+8 10 purple purple black

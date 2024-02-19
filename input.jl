@@ -85,10 +85,10 @@ function promptLoop()
                 end
                 
             elseif commands[1] in removeAliases
-                if commandParts !=3
-                    printred("No subject to remove. Please try help remove.")
-                elseif commands[2] == "node"
-                    removeNode(G,commands[3])
+                if commands[2] == "node"
+                    if commandParts == 3 removeNode(G,commands[3])
+                    elseif commandParts == 6 removeNodeFromEdge(G,commands[3],commands[6])#remove node [node] from edge [edge]
+                    end
                 elseif commands[2] == "edge"
                     removeEdge(G,commands[3])
                 end
@@ -171,15 +171,11 @@ function promptLoop()
                     spectralCoords(G)
                 end
             elseif commands[1] in loadAliases
-                if commands[2] in loadNodesAliases
-                    loadnodes(G,commands[3])
-                elseif commands[2] in loadEdgesAliases
-                    loadedges(G,commands[3])
-                    #TODO loading edges after nodes loses xy coords
-                elseif commands[2] in loadNodeMetaAliases
-
-                elseif commands[2] in loadEdgeMetaAliases
-
+                if commands[2] in loadNodesAliases loadnodes(G,commands[3])
+                elseif commands[2] in loadEdgesAliases loadedges(G,commands[3])
+                elseif commands[2] in loadNodeMetaAliases loadnodesmeta(G,commands[3])
+                elseif commands[2] in loadEdgeMetaAliases loadedgesmeta(G,commands[3])
+                elseif commands[2] in loadAllAliases loadAll(G,commands[3])
                 end
                 
                 
@@ -279,10 +275,12 @@ function promptLoop()
                     edge = findEdgeWithLabel(G,commands[3])
                     if edge != false edge.color = colorantRep
                     else
+                        println("Did not find edge with label")
                         edge2 = edgeFromMembers(G, commands[3], false)
+                        println(edge2)
                         if edge2 != false edge2.color = colorantRep 
                         else
-                            printyellow("Edge with label $(commands[3]) not found.")
+                            printyellow("Edge with label $(commands[3]) not found.\n")
                         end
                     end
                 end

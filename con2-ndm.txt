@@ -1,8 +1,0 @@
-a 10 green green black
-b 10 green green black
-c 10 green green black
-d 10 purple purple black
-e 10 purple purple black
-f 10 purple purple black
-g 10 purple purple black
-h 10 purple purple black

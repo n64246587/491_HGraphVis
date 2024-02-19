@@ -296,13 +296,12 @@ function makePlot(g::Hypergraph)::Plots.Plot{Plots.GRBackend}
     for currEdge in g.edges
         la = 1
         ms = 10
-        alp = .0
         #ms = 1
 
         if currEdge.displayType == 1 #hull mode
             
             H = hyperedgehull(currEdge, currEdge.hullSize)
-            plot!(graphPlot,VPolygon(H),alpha = currEdge.fill,linewidth = currEdge.lineWidth, markerstrokewidth = ms, linecolor = currEdge.color,linealpha = la, label=currEdge.label)
+            plot!(graphPlot,VPolygon(H),alpha = currEdge.fill,linewidth = currEdge.lineWidth, markerstrokewidth = ms, linecolor = currEdge.color,linealpha =la, label=currEdge.label, fillcolor =currEdge.color )
         elseif currEdge.displayType == 2 #bipartite mode
             #find centroid of poiints
             if currEdge.edgeLabelX == Inf && currEdge.edgeLabelY == Inf 
@@ -475,6 +474,48 @@ function addEdge(g::Hypergraph, label::String, mems = Node[],color = RGB{Float64
     push!(g.edges, newEdge)
     return newEdge
 end
+function removeNodeFromEdge(g::Hypergraph, nodelabel::String, edgeLabel::String)
+    if contains(edgeLabel,'[')
+        maybeedge = edgeFromMembers(g,edgeLabel,false)
+        if maybeedge != false
+            edgeLabel = maybeedge.label
+        end
+    end
+    i = 1
+    removeEdgeIndex = -1
+    for edge in g.edges
+        if edge.label == edgeLabel
+            removeEdgeIndex = i
+            break
+        end
+        i+=1
+    end
+
+    if removeEdgeIndex == -1
+        printyellow("Provided edge label \"$edgeLabel\"  does not exist in the graph. No edges deleted.\n")
+        return
+    end
+
+
+    i = 1
+    deleteNodeIndex = -1
+    for node in g.nodes
+        if node.label == nodelabel
+            deleteNodeIndex = i
+            break
+        end
+        i+=1  
+    end
+
+    if deleteNodeIndex == -1
+        printyellow("Provided node label \"$nodelabel\"  does not exist in the graph. No edges deleted.\n")
+        return
+    end
+
+    deleteat!(g.edges[removeEdgeIndex].members,deleteNodeIndex )
+
+end
+
 
 function removeEdge(g::Hypergraph, label::String)
     #Removes the first edge it finds with the appropriate label
@@ -1011,12 +1052,128 @@ function loadedgesmeta(g::Hypergraph,filepath::String)
         println(filepath, " could not be loaded.")  
         return 
     end
-    #edgeColor = "$(edge.color.r),$(edge.color.g),$(edge.color.b)"
-    #edgeMeta = "$(edge.label) $edgeColor $(edge.lineWidth) $(edge.displayType) $(edge.hullSize) $(edge.edgeLabelX) $(edge.edgeLabelY) $(edge.fill)"
-    
-    #TODO finish load edge metadata
-    for edge in lines
+
+    numEdges = length(g.edges)
+    if numEdges != 0 && numEdges != length(lines) 
+        printyellow("There are $numEdges edges and $numLines lines in the file.\nCannot assigne edges metadate from this file. \n")  
+        return
+    end
+
+    if numEdges == 0
+        for edge in lines
+            newEdge = Edge()
+            lArgs = ssplit(edge)
+            newEdge.label = lArgs[1]
+            r,gr,b = [parse(Float64, i) for i in ssplit(lArgs[2],",")]
+            colorantRep = RGB{}(r,gr,b)
+            newEdge.color = parse(Colorant{Float64},colorantRep)
+            newEdge.lineWidth = parse(Float64,lArgs[3])
+            newEdge.displayType = parse(Int64,lArgs[4])
+            newEdge.hullSize = parse(Float64,lArgs[5])
+            newEdge.edgeLabelX = parse(Float64,lArgs[6])
+            newEdge.edgeLabelX = parse(Float64,lArgs[7])
+            newEdge.fill = parse(Float64,lArgs[8])
+            push!(g.edges,newEdge)
+            #edgeColor = "$(edge.color.r),$(edge.color.g),$(edge.color.b)"
+            #edgeMeta = "$(edge.label) $edgeColor $(edge.lineWidth) $(edge.displayType) $(edge.hullSize) $(edge.edgeLabelX) $(edge.edgeLabelY) $(edge.fill)"
+        end
+    else
+        for edgeNum in 1:numEdges
+            lArgs = ssplit(edge)
+            g.edges[edgeNum].label = lArgs[1]
+            r,gr,b = [parse(Float64, i) for i in ssplit(lArgs[2],",")]
+            colorantRep = RGB{}(r,gr,b)
+            g.edges[edgeNum].color = parse(Colorant{Float64},colorantRep)
+            g.edges[edgeNum].lineWidth = parse(Float64,lArgs[3])
+            g.edges[edgeNum].displayType = parse(Int64,lArgs[4])
+            g.edges[edgeNum].hullSize = parse(Float64,lArgs[5])
+            g.edges[edgeNum].edgeLabelX = parse(Float64,lArgs[6])
+            g.edges[edgeNum].edgeLabelX = parse(Float64,lArgs[7])
+            g.edges[edgeNum].fill = parse(Float64,lArgs[8])
+
+        end
+
+    end
+
+end
+
+
+
+
+function loadAll(g::Hypergraph, edgefilepath::String, nodefilepath::String, edgemetafilepath::String, nodemetafilepath::String)
+    #TODO do this part first and collect all node data, do not just call the other functions
+    #reset the graph structure
+    empty!(g.edges)
+    empty!(g.nodes)
+    #read in the nodes
+    nodeLines = []
+    try 
+        open(nodefilepath) do file 
+            nodeLines = [i for i in readlines(file) if i != ""] 
+        end
+    catch 
+        println(nodefilepath, " could not be loaded.")  
+        return 
+    end
+    #read in the node metadata
+    nodeMetaLines = []
+    try 
+        open(nodemetafilepath) do file 
+            nodeMetaLines = [i for i in readlines(file) if i != ""] 
+        end
+    catch 
+        println(nodemetafilepath, " could not be loaded.")  
+        return 
+    end
+    #make sure they have the same amount of data
+    numNodeLines = length(nodeLines) 
+    numMetaNodeLines = length(nodeMetaLines)
+    if numNodeLines != numMetaNodeLines
+        printyellow("Dimmension mismatch. There are $numNodeLines nodes in the data and $numMetaNodeLines nodes in the metadata. \n")  
+        return
+    end
+
+    edgeLines = []
+    try 
+        open(edgefilepath) do file 
+            edgeLines = [i for i in readlines(file) if i != ""] 
+        end
+    catch 
+        println(edgefilepath, " could not be loaded.")  
+        return 
+    end
+
+    edgeMetaLines = []
+    try 
+        open(edgemetafilepath) do file 
+            edgeMetaLines = [i for i in readlines(file) if i != ""] 
+        end
+    catch 
+        println(edgemetafilepath, " could not be loaded.")  
+        return 
+    end
+
+    numEdgeLines = length(edgeLines) 
+    numMetaEdgeLines = length(edgeMetaLines)
+    if numEdgeLines != numMetaEdgeLines
+        printyellow("Dimmension mismatch. There are $numEdgeLines edges in the data and $numMetaEdgeLines edges in the metadata. \n")  
+        return
+    end
+
+
+    for edgeNum in 1:numEdgeLines
         newEdge = Edge()
+        lArgs = ssplit(edgeMetaLines[edgeNum])
+        newEdge.label = lArgs[1]
+        r,gr,b = [parse(Float64, i) for i in ssplit(lArgs[2],",")]
+        colorantRep = RGB{}(r,gr,b)
+        newEdge.color = parse(Colorant{Float64},colorantRep)
+        newEdge.lineWidth = parse(Float64,lArgs[3])
+        newEdge.displayType = parse(Int64,lArgs[4])
+        newEdge.hullSize = parse(Float64,lArgs[5])
+        newEdge.edgeLabelX = parse(Float64,lArgs[6])
+        newEdge.edgeLabelX = parse(Float64,lArgs[7])
+        newEdge.fill = parse(Float64,lArgs[8])
         #check for duplicate labels
         badEdgeLabel = false
         i = 64
@@ -1025,42 +1182,27 @@ function loadedgesmeta(g::Hypergraph,filepath::String)
             newEdge.label = string(Char(i))
             badEdgeLabel = true
         end
-        #check for duplicate colors
-        i = 0
-        while (newEdge.color == RGB{Float64}(0.0,0.0,0.0)) || doesEdgeColorExist(g,newEdge.color)
-            i = i+1 
-            newEdge.color = cp[i]
-        end
-        #looks for nodes by label (node is actually a node label here)
-        for nodeLabel in [string(i) for i in split(edge,",")]
-            maybeNode = findNodeWithLabel(g,nodeLabel)
-            if maybeNode == false
-                push!(newEdge.members,addNode(g,nodeLabel))
-            else
-                push!(newEdge.members,maybeNode)
-            end
-        end
         push!(g.edges,newEdge)
     end
-
+   
+    #add nodes to graph
+    for i in 1:numNodeLines
+        coords = [parse(Float64,j) for j in split(nodeLines[i],",")]
+        lineArgs = ssplit(nodeMetaLines[i])
+        nodeSize = parse(Int64,lineArgs[2])
+        newNode = Node(xCoord=coords[1],yCoord=coords[2],label=lineArgs[1], size=nodeSize, outlineColor=lineArgs[3], fillColor=lineArgs[4], labelColor=lineArgs[5])
+        push!(g.nodes,newNode)
+        #looks for nodes by label (node is actually a node label here)
+        for edgeNum in 1:numEdgeLines
+            if newNode.label in ssplit(edgeLines[edgeNum],",") push!(g.edges[edgeNum].members,newNode) end
+        end
+    end
 end
 
-
-
-
-function loadall(g::Hypergraph, graphfilepath::String, xyfilepath::String, graphmetafilepath::String, xymetafilepath::String)
-    loadedges(g,graphfilepath)
-    loadnodes(g,xyfilepath)
-    loadedges(g,graphmetafilepath)
-    loadnodes(g,xymetafilepath)
-end
 #TODO make a better version of this function
-function loadall(g::Hypergraph, allPath::String)
+function loadAll(g::Hypergraph, allPath::String)
     allPathRoot = allPath[begin:end-4]
-    loadedges(g,allPathRoot*"-eg.txt")
-    loadnodes(g,allPathRoot*"-nd.txt")
-    loadedgesmeta(g,allPathRoot*"-egm.txt")
-    loadnodesmeta(g,allPathRoot*"-ndm.txt")
+    loadAll(g,allPathRoot*"-eg.txt",allPathRoot*"-nd.txt",allPathRoot*"-egm.txt",allPathRoot*"-ndm.txt")
 end
 
 function parseEdgeExpression(g::Hypergraph,nodeLabels::String)::Edge
