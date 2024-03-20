@@ -3,5 +3,3 @@
 3 10 black white black
 4 10 black white black
 5 10 black white black
-6 10 black white black
-7 10 black white black

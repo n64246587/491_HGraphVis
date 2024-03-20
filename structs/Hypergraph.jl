@@ -12,6 +12,7 @@ bgPath::String = ""
 bgSet::Bool = false
 bgImg = load("rec1.png")
 
+showHullWarnings = false
 mutable struct Hypergraph
     edges::Vector{Edge}
     nodes::Vector{Node}
@@ -33,6 +34,29 @@ mutable struct Hypergraph
     Hypergraph(;edges::Vector{Edge}=Edge[],nodes::Vector{Node}=Node[],displayType::Int64=1,showTicks=false,showLabels=true,showLegend=false,xMin::Float64=Inf,xMax::Float64=-Inf,yMin::Float64=Inf,yMax::Float64=-Inf) = new(edges,nodes,displayType,showTicks,showLabels,showLegend,xMin,xMax,yMin,yMax) 
     
 end
+function unnessesarryNodes(edge::Edge, allNodes::Vector{Node}, r=.25)
+    # r controls how much of a border to put around nodes
+    # Output: a convex hull object that defines the hyperedge
+        p = Vector{Vector{Float64}}()
+        for node in edge.members
+            append!(p, circlepoints(node.xCoord, node.yCoord ,r))
+        end 
+        H = VPolygon(convex_hull(p))
+
+        for node in allNodes
+            if node ∉ edge.members
+                for point in circlepoints(node.xCoord, node.yCoord,r/10,8)
+                    if Singleton(point) ⊆ H
+                        printyellow("Node $(node.label) may be visually within or near edge $(edge.label), though it is not a member.\n")
+                        break
+                    end
+                end
+            end
+        end
+        return H
+    end
+
+
 function setAllEdgeMode(g::Hypergraph,edgemode::Int64)
     for edge in g.edges edge.displayType = edgemode end
 end
@@ -114,20 +138,56 @@ function moveNode(g::Hypergraph, node::Node, xUnits::Float64, yUnits::Float64)
 end
 
 function moveEdge(g::Hypergraph, edge::Edge, dir::String, units::Float64)
-    if (dir == "left" || dir == "l") edge.edgeLabelX -= units 
-    elseif (dir == "right" || dir == "x" ||  dir == "r") edge.edgeLabelX += units
-    elseif (dir == "up" || dir == "y" ||  dir == "u") edge.edgeLabelY += units
-    elseif (dir == "down" || dir == "d") edge.edgeLabelY -= units
-    else print("Invalid Direction in moveEdge") end
+    if dir in leftAlliases edge.edgeLabelX -= units 
+    elseif dir in rightAlliases edge.edgeLabelX += units
+    elseif dir in upAlliases edge.edgeLabelY += units
+    elseif dir in downAlliases edge.edgeLabelY -= units
+    else 
+        xVal = units*cos(pi/4)
+        yVal = units*sin(pi/4)
+        if dir in upRightAliases 
+            edge.edgeLabelX += xVal 
+            edge.edgeLabelY += yVal
+        elseif dir in downRightAliases 
+            edge.edgeLabelX += xVal 
+            edge.edgeLabelY -= yVal
+        elseif dir in upLeftAliases 
+            edge.edgeLabelX -= xVal 
+            edge.edgeLabelY += yVal
+        elseif dir in downLeftAliases 
+            edge.edgeLabelX -= xVal 
+            edge.edgeLabelY -= yVal
+        else
+         print("Invalid Direction in moveEdge") 
+        end
+    end
     setGraphLimits(g)
 end
 
 function moveNode(g::Hypergraph, node::Node, dir::String, units::Float64)
-    if (dir == "left" || dir == "l") node.xCoord -= units 
-    elseif (dir == "right" || dir == "x" ||  dir == "r") node.xCoord += units
-    elseif (dir == "up" || dir == "y" ||  dir == "u") node.yCoord += units
-    elseif (dir == "down" || dir == "d") node.yCoord -= units
-    else print("Invalid Direction in moveNode") end
+    if dir in leftAliases node.xCoord -= units 
+    elseif dir in rightAliases node.xCoord += units
+    elseif dir in upAliases node.yCoord += units
+    elseif dir in downAliases node.yCoord -= units
+    else 
+        xVal = units*cos(pi/4)
+        yVal = units*sin(pi/4)
+        if dir in upRightAliases 
+            node.xCoord += xVal 
+            node.yCoord += yVal
+        elseif dir in downRightAliases 
+            node.xCoord += xVal
+            node.yCoord -= yVal
+        elseif dir in upLeftAliases 
+            node.xCoord -= xVal 
+            node.yCoord += yVal
+        elseif dir in downLeftAliases 
+            node.xCoord -= xVal 
+            node.yCoord -= yVal
+        else
+         print("Invalid Direction in moveEdge") 
+        end
+    end
     setGraphLimits(g)
 end
 
@@ -228,6 +288,7 @@ function makePlot(g::Hypergraph)::Plots.Plot{Plots.GRBackend}
     global bgSet
     global bgPath
     global bgImg
+    global showHullWarnings
     graphPlot = plot()
     k = 0.25
     changeinX = g.xMax - g.xMin
@@ -299,9 +360,11 @@ function makePlot(g::Hypergraph)::Plots.Plot{Plots.GRBackend}
         #ms = 1
 
         if currEdge.displayType == 1 #hull mode
-            
+            H = showHullWarnings ? unnessesarryNodes(currEdge, g.nodes, currEdge.hullSize) : hyperedgehull(currEdge, currEdge.hullSize)
+            plot!(graphPlot,H,alpha = currEdge.fill,linewidth = currEdge.lineWidth, markerstrokewidth = ms, linecolor = currEdge.color,linealpha =la, label=currEdge.label, fillcolor =currEdge.color, linestyle = :solid )
+        elseif currEdge.displayType == -1 #hull mode
             H = hyperedgehull(currEdge, currEdge.hullSize)
-            plot!(graphPlot,VPolygon(H),alpha = currEdge.fill,linewidth = currEdge.lineWidth, markerstrokewidth = ms, linecolor = currEdge.color,linealpha =la, label=currEdge.label, fillcolor =currEdge.color )
+            plot!(graphPlot,VPolygon(H),alpha = currEdge.fill,linewidth = currEdge.lineWidth, markerstrokewidth = ms, linecolor = currEdge.color,linealpha =la, label=currEdge.label, fillcolor =currEdge.color, linestyle = :dash )
         elseif currEdge.displayType == 2 #bipartite mode
             #find centroid of poiints
             if currEdge.edgeLabelX == Inf && currEdge.edgeLabelY == Inf 
@@ -479,6 +542,9 @@ function removeNodeFromEdge(g::Hypergraph, nodelabel::String, edgeLabel::String)
         maybeedge = edgeFromMembers(g,edgeLabel,false)
         if maybeedge != false
             edgeLabel = maybeedge.label
+        else
+            printyellow("Provided edge label \"$edgeLabel\"  does not exist in the graph. No edges nodes.\n")
+            return
         end
     end
     i = 1
@@ -499,7 +565,7 @@ function removeNodeFromEdge(g::Hypergraph, nodelabel::String, edgeLabel::String)
 
     i = 1
     deleteNodeIndex = -1
-    for node in g.nodes
+    for node in g.edges[removeEdgeIndex].members
         if node.label == nodelabel
             deleteNodeIndex = i
             break
@@ -595,6 +661,8 @@ function simpleAddNodetoEdge(g::Hypergraph,nodeLabel::String,edgeLabel::String)
             break
         end
     end
+
+
     if nodeIndex == 0
         printyellow("No node with label $nodeLabel found in the graph\nMaking a new Node with label $nodeLabel\n")
         nodeIndex = length(g.nodes)+1
@@ -607,7 +675,18 @@ function simpleAddNodetoEdge(g::Hypergraph,nodeLabel::String,edgeLabel::String)
             return
         end
     end
+
+    #try uppercase
+    for edge in g.edges
+        if edge.label == uppercase(edgeLabel)
+            push!(edge.members, g.nodes[nodeIndex])
+            return
+        end
+    end
+
+    #try edge parsing
     maybeEdge = edgeFromMembers(g,edgeLabel)
+    #print(maybeEdge)
     if maybeEdge != false 
         push!(maybeEdge.members, g.nodes[nodeIndex]) 
         return 
@@ -727,7 +806,7 @@ function getAdjacentNodes(g::Hypergraph, v::Node)
 
     end
 
-    print("the adjacent nodes are ", adjacentNodes)
+    println("the adjacent nodes are ", adjacentNodes)
 
     return adjacentNodes
 end
@@ -840,8 +919,7 @@ function createSparseMatrix(g::Hypergraph)::SparseArrays.SparseMatrixCSC{Float64
     w = []
     for edge in g.edges
         for node1 in edge.members
-            i1 = findNodeIndexfromLabel(g,node1.label)
-            
+            i1 = findNodeIndexfromLabel(g,node1.label) 
             for node2 in edge.members
                 if node1 != node2
                     i2 = findNodeIndexfromLabel(g,node2.label)
@@ -865,13 +943,10 @@ function spectral_layout(A)
     d = vec(sum(A,dims = 2))
     Dhalf = Diagonal(d.^(-1/2))
     L = I - Dhalf*A*Dhalf
-    # Lam, E = eigs(L; nev = 3, which=:SM)
-
     sc = size(L,1)
     Vl,Vc,convinfo = eigsolve(L + sc*LinearAlgebra.I, 3, :SR; tol = 1e-8, maxiter = 1000, verbosity = 0)
     lam2 = Real(Vl[2])-sc
     E = [Vc[2] Vc[3]] 
-
     return E
 end
 
@@ -896,6 +971,7 @@ function spectralCoords(g::Hypergraph)
     A = createSparseMatrix(g)
 
     try
+        printgreen("Starting Spectral layout\n")
         xy = spectral_layout(A)
 
         if (typeof(xy) == Matrix{ComplexF64})
@@ -1263,6 +1339,33 @@ function printEdgelist(edgeList::Vector{Edge})
         thisMembers = membersList[i]
         println("$thisLabel"*" "^(labelSpace-length(thisLabel))*" | "*"$thisMembers"*" "^(memberSpace-length(thisMembers)))
     end
+
+end
+
+function printNodelist(edgeList::Vector{Node})
+    labelsList::Vector{String} = []
+    longestLabel = 0
+    membersList::Vector{String} = []
+    longestMembers = 0
+    # for edge in edgeList
+    #     label = edge.label
+    #     llength = length(label)
+    #     members = "["*join([node.label for node in edge.members],",")*"]"
+    #     mlength = length(members)
+    #     if llength>longestLabel longestLabel = llength end
+    #     if mlength>longestMembers longestMembers = mlength end
+    #     push!(labelsList,label)
+    #     push!(membersList,members)
+    # end
+    # labelSpace = max(longestMembers,5)
+    # memberSpace = max(longestMembers,7)
+    # println("label"*" "^(labelSpace-5)*" | "*"members"*" "^(memberSpace-7))
+    # println("_"^(labelSpace)*" | "*"_"^(memberSpace))
+    # for i in 1:length(labelsList)
+    #     thisLabel = labelsList[i]
+    #     thisMembers = membersList[i]
+    #     println("$thisLabel"*" "^(labelSpace-length(thisLabel))*" | "*"$thisMembers"*" "^(memberSpace-length(thisMembers)))
+    # end
 
 end
 

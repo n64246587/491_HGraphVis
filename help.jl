@@ -15,7 +15,7 @@ const removeHelp =    "|   Remove   |             Remove a node or edge with the
 const moveHelp =      "|    Move    |     Move the node with label `nodelabel` directly to the position `xCoord` `yCoord`   |      move {node} `nodeLabel` to `xCoord` `yCoord`      |\n"*
                       "|    Move    |    Move the node with label `nodelabel` in the specified diirection by `value` units  |  move {node} `nodeLabel` [up/down/left/right] `value`  |"
 const layoutHelp=     "|   Layout   |             Applies the specified layout to the xy coordinates of all nodes           |            layout [force,spectral,circle]              |"
-const toggleHelp =    "|   Toggle   |               Turns on or off the specified feature of the visualization              |              toggle [grid, label, legend]              |"
+const toggleHelp =    "|   Toggle   |               Turns on or off the specified feature of the visualization              |         toggle [grid, label, legend, warnings]         |"
 const loadHelp =      "|    Load    |     Load the text file `filepath.txt` which will override the current session data    | load [nodes/edges/nodemeta/edgemeta/all] `filepath.txt`|"
 const edgeModeHelp=   "|  Edgemode  |    Specify how the edge with label `edgeLabel` or all hyperedges should be rendered   |  edgemode {`edgeLabel`} [none/clique/bipartite/convex] |"
 const hullSizeHelp=   "|  Hullsize  |    Set the hullsize in convex mode of the edge with label `edgeLabel` or all edges    |        hullsize {`edgeLabel`} `hullsize`=0.25          |"
@@ -113,3 +113,14 @@ const cliqueAliases = ["clique","c","3"]
 const bipartiteAliases = ["bipartite","b","bi","2"]
 const convexAliases = ["convex","hull","convexhull","1"]
 const noEdgeTypeAliases = ["none", "no" , "0"]
+
+# directionalliases
+const upAliases = ["up","u","y","north","n"]
+const downAliases = ["down","d","-y","south","s"]
+const leftAliases = ["left","l","-x","west","w"]
+const rightAliases = ["right","r","east","e","x"]
+
+const upRightAliases = ["upright","rightup","ur","ru","northeast","ne"]
+const downRightAliases = ["downright","rightdown","dr","rd","southeast","se"]
+const upLeftAliases = ["upleft","leftup","ul","lu","northwest","nw"]
+const downLeftAliases = ["downleft","leftdown","dl","ld","southestt","sw"]

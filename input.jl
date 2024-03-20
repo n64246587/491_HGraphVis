@@ -7,6 +7,7 @@ include("./structs/Hypergraph.jl")
 
 
 debug = false
+
 G = Hypergraph()
 input = ""
 commands= String[]
@@ -56,6 +57,7 @@ end
 function promptLoop()
     global G
     global debug
+    global showHullWarnings
 
     while true
         try
@@ -189,6 +191,16 @@ function promptLoop()
                     G.showLegend = !G.showLegend
                 elseif commands[2] == "debug"
                     debug = !debug
+                elseif contains(commands[2] ,"warn") || contains(commands[2] ,"hull")
+                    showHullWarnings = !showHullWarnings
+                elseif contains(commands[2] ,"dash")
+                    edge = findEdgeWithLabel(G,commands[3])
+                    if edge != false edge.displayType *= -1 
+                    else
+                        edge2 = edgeFromMembers(G, commands[3], false)
+                        if edge2 != false edge2.displayType *= -1 end 
+                    end
+                    
                 end
 
             elseif commands[1] in edgeModeAliases

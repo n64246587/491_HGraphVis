@@ -1,5 +1,5 @@
 include("./Node.jl")
-using LazySets,Plots,KrylovKit,SparseArrays,Images
+using LazySets,Plots,KrylovKit,SparseArrays,Images,LinearAlgebra
 
 nametoColorDict = Dict(value => key for (key, value) in Colors.color_names)
 mutable struct Edge
@@ -74,8 +74,9 @@ function circlepoints(centerX,centerY,radius,pts = 100)
             append!(p, circlepoints(node.xCoord, node.yCoord ,r))
         end 
         H = convex_hull(p)
-        return H
+        return VPolygon(H)
     end
+
 
 #dictionary does not have every color nametoColorDict #might have to load color by some other metric like RGB values in the text file
 function getColorName(c::RGB{Float64})::String
