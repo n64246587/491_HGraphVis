@@ -59,6 +59,23 @@ function unnessesarryNodes(edge::Edge, allNodes::Vector{Node}, r=.25)
 
 function setAllEdgeMode(g::Hypergraph,edgemode::Int64)
     for edge in g.edges edge.displayType = edgemode end
+    if edgemode == 2
+        for currEdge in g.edges 
+            xCenter::Float64 = 0.0
+            yCenter::Float64 = 0.0
+            for node in currEdge.members
+                xCenter += node.xCoord
+                yCenter += node.yCoord
+            end
+            xCenter /= length(currEdge.members)
+            yCenter /= length(currEdge.members)
+            currEdge.edgeLabelX = xCenter
+            currEdge.edgeLabelY = yCenter
+        end
+    end
+end
+function setAllNodeSize(g::Hypergraph, hs::Float64)
+    for node in g.nodes node.size = hs end
 end
 
 function setAllEdgeFill(g::Hypergraph,edgefill::Float64)
@@ -352,13 +369,12 @@ function makePlot(g::Hypergraph)::Plots.Plot{Plots.GRBackend}
         xy[currNode,:] = [thisNode.xCoord, thisNode.yCoord]
         push!(labels, thisNode.label)
     end
-
     # Populate the edges vector and plot the edges
     for currEdge in g.edges
         la = 1
         ms = 10
         #ms = 1
-
+        
         if currEdge.displayType == 1 #hull mode
             H = showHullWarnings ? unnessesarryNodes(currEdge, g.nodes, currEdge.hullSize) : hyperedgehull(currEdge, currEdge.hullSize)
             plot!(graphPlot,H,alpha = currEdge.fill,linewidth = currEdge.lineWidth, markerstrokewidth = ms, linecolor = currEdge.color,linealpha =la, label=currEdge.label, fillcolor =currEdge.color, linestyle = :solid )

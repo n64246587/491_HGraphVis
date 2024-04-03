@@ -259,6 +259,13 @@ function promptLoop()
                 elseif '[' in commands[2] printEdgelist(edgesWithLabels(G,stringWithinSB(commands[2])))
                 else printEdgelist(edgesWithLabels(G,commands[2]))
                 end
+            elseif commands[1] in nodeSizeAliases 
+                if commandParts == 2 setAllNodeSize(G, parse(Float64, commands[2])) 
+                elseif commandParts == 3 
+                    node = findNodeWithLabel(G, commands[2])
+                    node.size = parse(Float64, commands[3])
+                end
+            
 
 
             elseif commands[1] in setColorAliases

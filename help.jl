@@ -4,7 +4,7 @@ const header =      "\nAll imputs are lowercased, therefore the prompt is not ca
                     "Words in backticks such as `nodelabel` are variables for you to fill in. Do not type the backticks.\n" * 
                     "Words in curly brackets such as {`edge`} optional and specifying them may change the way the command works. Do not type the curly brackets.\n" * 
                      "Words in square brackets seperated by a slash such as [node/edge] mean that you should pick one of the options and type it. Do not type the square brackets or the slash.\n" *
-                     "If you see an equal sign after a parameter, such as `hullsize`=0.25, that is an indication of the default, unmodified value for that field. You do still have to specify your value. Do not type the equal sign or default value.\n\n" *  
+                     "If you see an equal sign after a parameter, such as `hullsize`=0.25, that is an indication of the default, unmodified value for that field.\nYou do still have to specify your value. Do not type the equal sign or default value.\n\n" *  
                       "|  Command   |                                      Description                                      |                         Syntax                         |\n"*
                       "|____________|_______________________________________________________________________________________|________________________________________________________|"
 const helpHelp=       "|    Help    |   Shows this table if no arguments and shows a specific command's entry id specified  |                     help {`command`}                   |"
@@ -23,6 +23,7 @@ const edgelistHelp=   "|  Edgelist  |  List all edges. If `node` is given, will 
 const setColorHelp=   "|  Setcolor  |  Set the color of the given node or edge with the label `label` to the color `color`  |          setcolor [node/edge] `label` `color`          |"
 const saveHelp=       "|    Save    |    Save the session to 4 txt files (nd,ndm,eg,egm) that look like `filepath-().txt`   |                  saveas `filepath.txt`                 |"
 const edgeFillHelp=   "|  edgefill  |    Set the opacity in convex mode of the edge with label `edgeLabel` or all edges     |         edgefill {`edgeLabel`} `opacity`=0.0           |"
+const nodeSizeHelp =  "|  nodesize  |      Sets the nodesize for a node with label `nodelabel` to value, or all nodes       |               nodesize `nodeLabel` `value`             |"
 #const backgroundHelp= "| background |  Set the bg to an image specified by `filepath` or rests the bg if filepath is blank  |                 background `filepath`                  |"
 
 const nodeAlliases = ["n", "node","nodes"]
@@ -58,6 +59,8 @@ const setColorAliases = ["setcolor","color"]
 const saveAliases = ["save","saveas"]
 const edgeFillAliases = ["edgefill","ef","fill","opacity"]
 
+const nodeSizeAliases = ["ns","nodesize", "size"]
+
 const backgroundAliases = ["background","bg"]
 
 function printHelp(commands::Vector{String} = String[])
@@ -76,6 +79,7 @@ function printHelp(commands::Vector{String} = String[])
     elseif commands[1] in setColorAliases println(setColorHelp)
     elseif commands[1] in saveAliases println(saveHelp)
     elseif commands[1] in edgeFillAliases println(edgeFillHelp)
+    elseif commands[1] in nodeSizeAliases println(nodeSizeHelp)
     #elseif commands[1] in backgroundAliases println(backgroundHelp)
     
     end
@@ -98,6 +102,7 @@ function allHelp()
     println(setColorHelp)
     println(saveHelp)
     println(edgeFillHelp)
+    println(nodeSizeHelp)
     #println(backgroundHelp)
 
 end
