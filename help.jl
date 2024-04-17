@@ -20,14 +20,16 @@ const loadHelp =      "|    Load    |     Load the text file `filepath.txt` whic
 const edgeModeHelp=   "|  Edgemode  |    Specify how the edge with label `edgeLabel` or all hyperedges should be rendered   |  edgemode {`edgeLabel`} [none/clique/bipartite/convex] |"
 const hullSizeHelp=   "|  Hullsize  |    Set the hullsize in convex mode of the edge with label `edgeLabel` or all edges    |        hullsize {`edgeLabel`} `hullsize`=0.25          |"
 const edgelistHelp=   "|  Edgelist  |  List all edges. If `node` is given, will only list edges with that node as a member  |                   edgelist {`node`}                    |"
-const setColorHelp=   "|  Setcolor  |  Set the color of the given node or edge with the label `label` to the color `color`  |          setcolor [node/edge] `label` `color`          |"
+const setColorHelp=   "|  Setcolor  |  Set the color of the given node or edge with the label `label` to the color `color`  |    setcolor [nodefill/nodelabel/edge] `label` `color`  |"
 const saveHelp=       "|    Save    |    Save the session to 4 txt files (nd,ndm,eg,egm) that look like `filepath-().txt`   |                  saveas `filepath.txt`                 |"
 const edgeFillHelp=   "|  edgefill  |    Set the opacity in convex mode of the edge with label `edgeLabel` or all edges     |         edgefill {`edgeLabel`} `opacity`=0.0           |"
 const nodeSizeHelp =  "|  nodesize  |      Sets the nodesize for a node with label `nodelabel` to value, or all nodes       |               nodesize `nodeLabel` `value`             |"
+const swapNodesHelp = "|  swapnodes |    Swaps the xy coordinates of the nodes with labels `nodeLabel1` and `nodeLabel2`    |           swapnodes `nodeLabel1` `nodeLabel2`          |"
 #const backgroundHelp= "| background |  Set the bg to an image specified by `filepath` or rests the bg if filepath is blank  |                 background `filepath`                  |"
 
-const nodeAlliases = ["n", "node","nodes"]
-const edgeAlliases = ["e", "edge", "edges","hyperedge"]
+const nodeAliases = ["n", "node","nodes","nodefill"]
+const edgeAliases = ["e", "edge", "edges","hyperedge"]
+const nodeLabelAliases = ["nodelabel","nodeoutline","nl","no"]
 
 #TODO change buffer around the nodes
 #TODO show edgeList "either all or of a node"
@@ -60,6 +62,7 @@ const saveAliases = ["save","saveas"]
 const edgeFillAliases = ["edgefill","ef","fill","opacity"]
 
 const nodeSizeAliases = ["ns","nodesize", "size"]
+const swapNodesAliases = ["swapnodes","swapnode","sn"]
 
 const backgroundAliases = ["background","bg"]
 
@@ -80,6 +83,7 @@ function printHelp(commands::Vector{String} = String[])
     elseif commands[1] in saveAliases println(saveHelp)
     elseif commands[1] in edgeFillAliases println(edgeFillHelp)
     elseif commands[1] in nodeSizeAliases println(nodeSizeHelp)
+    elseif commands[1] in swapNodesAliases println(swapNodesHelp)
     #elseif commands[1] in backgroundAliases println(backgroundHelp)
     
     end
@@ -103,6 +107,7 @@ function allHelp()
     println(saveHelp)
     println(edgeFillHelp)
     println(nodeSizeHelp)
+    println(swapNodesHelp)
     #println(backgroundHelp)
 
 end
@@ -119,7 +124,7 @@ const bipartiteAliases = ["bipartite","b","bi","2"]
 const convexAliases = ["convex","hull","convexhull","1"]
 const noEdgeTypeAliases = ["none", "no" , "0"]
 
-# directionalliases
+# directionAliases
 const upAliases = ["up","u","y","north","n"]
 const downAliases = ["down","d","-y","south","s"]
 const leftAliases = ["left","l","-x","west","w"]

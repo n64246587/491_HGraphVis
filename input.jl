@@ -173,7 +173,8 @@ function promptLoop()
                     spectralCoords(G)
                 end
             elseif commands[1] in loadAliases
-                if commands[2] in loadNodesAliases loadnodes(G,commands[3])
+                if commandParts == 2 loadAll(G,commands[2]) 
+                elseif commands[2] in loadNodesAliases loadnodes(G,commands[3])
                 elseif commands[2] in loadEdgesAliases loadedges(G,commands[3])
                 elseif commands[2] in loadNodeMetaAliases loadnodesmeta(G,commands[3])
                 elseif commands[2] in loadEdgeMetaAliases loadedgesmeta(G,commands[3])
@@ -283,13 +284,13 @@ function promptLoop()
                     colorantRep = parse(Colorant{Float64}, commands[4])
                 end
                     
-                if commands[2] in nodeAlliases
+                if commands[2] in nodeAliases
                     # nodeToColor = findNodeWithLabel(G, commands[3])
                     # nodeToColor.fillColor = colorString
                     ind = findNodeIndexfromLabel(G,commands[3])
                     if (ind != -1) updateNodeColor(G.nodes[ind], colorString, colorString, "") end
 
-                elseif commands[2] in edgeAlliases
+                elseif commands[2] in edgeAliases
                     
                     edge = findEdgeWithLabel(G,commands[3])
                     if edge != false edge.color = colorantRep
@@ -302,6 +303,19 @@ function promptLoop()
                             printyellow("Edge with label $(commands[3]) not found.\n")
                         end
                     end
+                elseif commands[2] in nodeLabelAliases
+                    ind = findNodeIndexfromLabel(G,commands[3])
+                    if (ind != -1) updateNodeLabelColor(G.nodes[ind], colorString) end
+                end
+            elseif commands[1] in swapNodesAliases
+                n1 =  findNodeIndexfromLabel(G,commands[2])
+                n2 = findNodeIndexfromLabel(G,commands[3])
+                if n1 == -1 
+                    printyellow("Node with label $(commands[2]) could not be found.\n")
+                elseif n2 == -1 
+                    printyellow("Node with label $(commands[3]) could not be found.\n")
+                else
+                    swapnodes(G,G.nodes[n1],G.nodes[n2])
                 end
 
             elseif commands[1] in saveAliases

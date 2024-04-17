@@ -8,10 +8,6 @@ printyellow(s::String) = printstyled(s,color=:yellow)
 ssplit(s::String,delim::String=" ")::Vector{String} = [lowercase(String(i)) for i in split(strip(s), delim)] 
 stringWithinSB(s::String)::String = String(s[findfirst('[',s)+1:findfirst(']',s)-1])
 
-bgPath::String = ""
-bgSet::Bool = false
-bgImg = load("rec1.png")
-
 showHullWarnings = false
 mutable struct Hypergraph
     edges::Vector{Edge}
@@ -55,7 +51,14 @@ function unnessesarryNodes(edge::Edge, allNodes::Vector{Node}, r=.25)
         end
         return H
     end
-
+function swapnodes(g::Hypergraph,node1::Node,node2::Node)
+    n1x = node1.xCoord
+    n1y = node1.yCoord
+    node1.xCoord = node2.xCoord
+    node1.yCoord = node2.yCoord
+    node2.xCoord = n1x
+    node2.yCoord = n1y
+end
 
 function setAllEdgeMode(g::Hypergraph,edgemode::Int64)
     for edge in g.edges edge.displayType = edgemode end
@@ -302,43 +305,16 @@ end
 
 # This function returns a plot object containing the visualization of the graph object g
 function makePlot(g::Hypergraph)::Plots.Plot{Plots.GRBackend} 
-    global bgSet
-    global bgPath
-    global bgImg
     global showHullWarnings
     graphPlot = plot()
     k = 0.25
     changeinX = g.xMax - g.xMin
     changeinY = g.yMax - g.yMin
-
     deltaX = changeinX * k
     deltaY = changeinY * k
     halfSideLength =  changeinX>changeinY ? (changeinX+deltaX)/2 : (changeinY+deltaY)/2
     centerX = (g.xMax + g.xMin) / 2
     centerY = (g.yMax + g.yMin) / 2
-    #plot bg image
-    
-    # if bgPath != ""
-    #     if bgSet == false
-    #         try
-    #             bgImg = load(bgPath)
-    #             bgSet = true
-    #         catch
-    #             printyellow("Image could not be loaded.")
-    #             bgSet = false
-    #         end
-    #     end
-    #     if bgSet == true
-    #         plot!(graphPlot,bgImg)
-    #     end
-    # end
-
-    # if bgSet == false
-    #     plot!(graphPlot,bgImg)
-    #     bgSet = true
-    # end
-    
-
     
     plot!(graphPlot, xlim = [centerX - halfSideLength,centerX + halfSideLength], ylim = [centerY- halfSideLength, centerY + halfSideLength])
     plot!(graphPlot, aspect_ratio=:equal) #let the aspect ratio always be equal, requested by Dr. Veldt
@@ -457,7 +433,7 @@ end
 """
 Adds a new node constructed from the arguments in `commands`.
 Assumes commands is of the form:
-\t\t add node -l label -s size - oc outlineColor -fc fillColor -lc labelColor -x xCoord -y yCoords
+\t\t add node -l label -s size - oc outlineColor -fc fillColor -lc labelColor -x xCoord -y yCoord
 
 """
 function addNode(g::Hypergraph, commands::Vector{String})
@@ -1252,6 +1228,17 @@ function loadAll(g::Hypergraph, edgefilepath::String, nodefilepath::String, edge
         return
     end
 
+     #add nodes to graph
+     for i in 1:numNodeLines
+        coords = [parse(Float64,j) for j in split(nodeLines[i],",")]
+        lineArgs = ssplit(nodeMetaLines[i])
+        nodeSize = parse(Int64,lineArgs[2])
+        newNode = Node(xCoord=coords[1],yCoord=coords[2],label=lineArgs[1], size=nodeSize, outlineColor=lineArgs[3], fillColor=lineArgs[4], labelColor=lineArgs[5])
+        push!(g.nodes,newNode)
+        #looks for nodes by label (node is actually a node label here)
+       
+    end
+
 
     for edgeNum in 1:numEdgeLines
         newEdge = Edge()
@@ -1276,19 +1263,14 @@ function loadAll(g::Hypergraph, edgefilepath::String, nodefilepath::String, edge
         end
         push!(g.edges,newEdge)
     end
-   
-    #add nodes to graph
     for i in 1:numNodeLines
-        coords = [parse(Float64,j) for j in split(nodeLines[i],",")]
-        lineArgs = ssplit(nodeMetaLines[i])
-        nodeSize = parse(Int64,lineArgs[2])
-        newNode = Node(xCoord=coords[1],yCoord=coords[2],label=lineArgs[1], size=nodeSize, outlineColor=lineArgs[3], fillColor=lineArgs[4], labelColor=lineArgs[5])
-        push!(g.nodes,newNode)
-        #looks for nodes by label (node is actually a node label here)
+        newNode = g.nodes[i]
         for edgeNum in 1:numEdgeLines
             if newNode.label in ssplit(edgeLines[edgeNum],",") push!(g.edges[edgeNum].members,newNode) end
         end
     end
+   
+   
 end
 
 #TODO make a better version of this function

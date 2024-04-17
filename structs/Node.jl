@@ -21,7 +21,9 @@ function updateNodeColor(n::Node, fc::String, oc::String, lc::String)
     if (oc != "")
         n.outlineColor = oc
     end
+end
 
+function updateNodeLabelColor(n::Node, lc::String)
     if (lc != "")
         n.labelColor = lc
     end

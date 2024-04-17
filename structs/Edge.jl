@@ -14,9 +14,9 @@ mutable struct Edge
     edgeLabelY::Float64
     fill::Float64
 
-    Edge() = new("",Node[],RGB{Float64}(0.0,0.0,0.0),1.0,3,0.25,Inf,Inf,0.0)
+    Edge() = new("",Node[],RGB{Float64}(0.0,0.0,0.0),1.0,1,0.25,Inf,Inf,0.1)
     Edge(l,m,c,lw,dt,hs,elX,elY,ef) = new(l,m,c,lw,dt,hs,elX,elY,ef)
-    Edge(;l="",m=Node[],c=RGB{Float64}(0.0,0.0,0.0),lw=1.0,dt=3,hs=0.25,elX=Inf,elY=Inf,ef=0.0) = new(l,m,c,lw,dt,hs,elX,elY,ef)
+    Edge(;l="",m=Node[],c=RGB{Float64}(0.0,0.0,0.0),lw=1.0,dt=1,hs=0.25,elX=Inf,elY=Inf,ef=0.1) = new(l,m,c,lw,dt,hs,elX,elY,ef)
 end
 
 function parseEdge(lineArgs::Vector{String})::Edge
