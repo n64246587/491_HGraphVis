@@ -486,8 +486,8 @@ function removeNode(g::Hypergraph, label::String)
                 break
             end
         end
-        if (deleteIndex != -1) deleteat!(edge.members, deleteIndex) end
-        if length(edge.members) == 0 pushfirst!(deleteEdges,edgeNum) end # adds them to front to evaluate backwards
+        if (deleteIndex != -1) deleteat!(g.edges[edgeNum].members, deleteIndex) end
+        if length(g.edges[edgeNum].members) == 0 pushfirst!(deleteEdges,edgeNum) end # adds them to front to evaluate backwards
     end
 
     #delete all empty edges

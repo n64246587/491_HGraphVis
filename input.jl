@@ -6,6 +6,8 @@ printstyled("Loading Packages...\n",color=:green)
 include("./structs/Hypergraph.jl")
 
 
+
+
 debug = false
 
 G = Hypergraph()
@@ -370,8 +372,10 @@ displayGraph()
 printstyled("Finished loading packages.\nWelcome to the Interactive Hypergraph Visualizer.\n",color=:green)
 promptLoop() 
 intendedExit = true
+printgreen("Program Exited Safely from Main. ")
+if isinteractive() printgreen("Returning to REPL.") else printgreen("Goodbye.") end
 #TODO leaves a window behind until that repl is Exited
-#maybe fork and exec vp could work
-if isinteractive() run(`julia.exe`) end
-exit(0)
+#maybe exec vp could work
+
+#exit(0)
 
