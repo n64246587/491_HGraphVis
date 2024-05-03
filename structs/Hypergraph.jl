@@ -13,7 +13,7 @@ mutable struct Hypergraph
     edges::Vector{Edge}
     nodes::Vector{Node}
 
-    displayType::Int64
+    nextInt::Int64
     showTicks::Bool
     showLabels::Bool
     showLegend::Bool
@@ -26,8 +26,8 @@ mutable struct Hypergraph
 
 
     Hypergraph() = new(Edge[],Node[],1,false,true,false,Inf,-Inf,Inf,-Inf)
-    Hypergraph(e,n,dt,sT,sLa,sLe,xm,xM,ym,yM) = new(e,n,dt,sT,sLa,sLe,xm,xM,ym,yM)
-    Hypergraph(;edges::Vector{Edge}=Edge[],nodes::Vector{Node}=Node[],displayType::Int64=1,showTicks=false,showLabels=true,showLegend=false,xMin::Float64=Inf,xMax::Float64=-Inf,yMin::Float64=Inf,yMax::Float64=-Inf) = new(edges,nodes,displayType,showTicks,showLabels,showLegend,xMin,xMax,yMin,yMax) 
+    Hypergraph(e,n,nI,sT,sLa,sLe,xm,xM,ym,yM) = new(e,n,nI,sT,sLa,sLe,xm,xM,ym,yM)
+    Hypergraph(;edges::Vector{Edge}=Edge[],nodes::Vector{Node}=Node[],nextInt::Int64=1,showTicks=false,showLabels=true,showLegend=false,xMin::Float64=Inf,xMax::Float64=-Inf,yMin::Float64=Inf,yMax::Float64=-Inf) = new(edges,nodes,nextInt,showTicks,showLabels,showLegend,xMin,xMax,yMin,yMax) 
     
 end
 function unnessesarryNodes(edge::Edge, allNodes::Vector{Node}, r=.25)
@@ -35,11 +35,16 @@ function unnessesarryNodes(edge::Edge, allNodes::Vector{Node}, r=.25)
     # Output: a convex hull object that defines the hyperedge
         p = Vector{Vector{Float64}}()
         for node in edge.members
+            println("Node Size is $(node.size)")
+            if node.size == 0 continue end
             append!(p, circlepoints(node.xCoord, node.yCoord ,r))
         end 
+        println("Before V polygon")
         H = VPolygon(convex_hull(p))
+        println("Before V polygon UN")
 
         for node in allNodes
+            if node.size == 0 continue end
             if node ∉ edge.members
                 for point in circlepoints(node.xCoord, node.yCoord,r/10,8)
                     if Singleton(point) ⊆ H
@@ -51,7 +56,7 @@ function unnessesarryNodes(edge::Edge, allNodes::Vector{Node}, r=.25)
         end
         return H
     end
-function swapnodes(g::Hypergraph,node1::Node,node2::Node)
+function swapnodes(node1::Node,node2::Node)
     n1x = node1.xCoord
     n1y = node1.yCoord
     node1.xCoord = node2.xCoord
@@ -78,23 +83,21 @@ function setAllEdgeMode(g::Hypergraph,edgemode::Int64)
     end
 end
 function setAllNodeSize(g::Hypergraph, hs::Float64)
-    for node in g.nodes node.size = hs end
+    for node in g.nodes 
+        if node.size > 0 node.size = hs end
+    end
 end
-
 function setAllEdgeFill(g::Hypergraph,edgefill::Float64)
     for edge in g.edges edge.fill = edgefill end
 end
-
 function setAllEdgeRad(g::Hypergraph,hullSize::Float64)
     for edge in g.edges edge.hullSize = hullSize end
 end
-
-
-function findNodeIndexfromLabel(g::Hypergraph,label::String)
-    for node in 1:length(g.nodes) if lowercase(g.nodes[node].label) == label return node end end
+#TODO this function should no longer be needed
+function findNodeIndexfromLabel(g::Hypergraph,label::Int64)
+    for node in 1:length(g.nodes) if node == label return node end end
     return false
 end
-
 function findEdgeIndexfromLabel(g::Hypergraph,label::String)
     for edge in 1:length(g.edges) if lowercase(g.edges[edge].label) == label return edge end end
     return false
@@ -103,35 +106,36 @@ end
 function doesEdgeColorExist(g::Hypergraph,color::RGB{Float64})::Bool
     for edge in g.edges if edge.color == color return true end end
     return false
-end
+    end
 
 function findEdgeWithColor(g::Hypergraph,color::RGB{Float64})
     for edge in g.edges if edge.color == color return edge end end
     return false
-end
+    end
 
+#TODO function should not be needed
 function findNodeWithLabel(g::Hypergraph,label::String)
     for node in g.nodes if lowercase(node.label) == label return node end end
     return false
-end
+    end
 
 function findEdgeWithLabel(g::Hypergraph,label::String)
     for edge in g.edges if lowercase(edge.label) == label return edge end end
     return false
-end
+    end
 
 # returns the true if an edge with this label is found
 function doesEdgeLabelExist(g::Hypergraph,label::String)::Bool
     for edge in g.edges if edge.label == label return true end end
     return false
-end
+    end
 
 # returns the true if a node with this label is found
-function doesNodeLabelExist(g::Hypergraph,label::String)
+#TODO this should not be needed either
+function doesNodeLabelExist(g::Hypergraph,label::Int64)
     for node in g.nodes if node.label == label return true end end
     return false
-end
-
+    end
 
 # returns the first index of a string in a vector. Returns -1 if not found
 function findIndex(lineArgs, substr)
@@ -140,8 +144,7 @@ function findIndex(lineArgs, substr)
         if lineArgs[i] == substr return i end
     end
     return -1
-end
-
+    end
 function findAllIndex(lineArgs, substr)::Vector{Int64}
     numArgs = length(lineArgs)
     ret = Int64[]
@@ -149,14 +152,12 @@ function findAllIndex(lineArgs, substr)::Vector{Int64}
         if lineArgs[i] == substr push!(ret,i) end
     end
     return ret
-end
-
+    end
 function moveNode(g::Hypergraph, node::Node, xUnits::Float64, yUnits::Float64)
     node.xCoord = xUnits
     node.yCoord = yUnits
     setGraphLimits(g)
-end
-
+    end
 function moveEdge(g::Hypergraph, edge::Edge, dir::String, units::Float64)
     if dir in leftAlliases edge.edgeLabelX -= units 
     elseif dir in rightAlliases edge.edgeLabelX += units
@@ -183,15 +184,14 @@ function moveEdge(g::Hypergraph, edge::Edge, dir::String, units::Float64)
     end
     setGraphLimits(g)
 end
-
 function moveNode(g::Hypergraph, node::Node, dir::String, units::Float64)
     if dir in leftAliases node.xCoord -= units 
     elseif dir in rightAliases node.xCoord += units
     elseif dir in upAliases node.yCoord += units
     elseif dir in downAliases node.yCoord -= units
     else 
-        xVal = units*cos(pi/4)
-        yVal = units*sin(pi/4)
+        xVal = units*0.7071067811865476
+        yVal = units*0.7071067811865475
         if dir in upRightAliases 
             node.xCoord += xVal 
             node.yCoord += yVal
@@ -205,14 +205,14 @@ function moveNode(g::Hypergraph, node::Node, dir::String, units::Float64)
             node.xCoord -= xVal 
             node.yCoord -= yVal
         else
-         print("Invalid Direction in moveEdge") 
+            print("Invalid Direction in moveEdge") 
         end
     end
     setGraphLimits(g)
 end
 
 function moveNode(g::Hypergraph, label::String, xUnits::Float64, yUnits::Float64)
-    node = findNodeWithLabel(g, label)
+    node = g.nodes[parse(Int64, label)]    
     node.xCoord = xUnits
     node.yCoord = yUnits
     setGraphLimits(g)
@@ -226,7 +226,8 @@ function moveEdge(g::Hypergraph, label::String, xUnits::Float64, yUnits::Float64
 end
 
 function moveNode(g::Hypergraph, label::String, dir::String, units::Float64)
-    index = findNodeIndexFromLabel(g, label)
+    index = parse(Int64,label)
+    println("Moving node $label $dir by $units units")
     if (dir == "left" || dir == "l") g.nodes[index].xCoord -= units 
     elseif (dir == "right" || dir == "x" ||  dir == "r") g.nodes[index].xCoord += units
     elseif (dir == "up" || dir == "y" ||  dir == "u") g.nodes[index].yCoord += units
@@ -328,7 +329,7 @@ function makePlot(g::Hypergraph)::Plots.Plot{Plots.GRBackend}
     n = length(g.nodes)
     xy = zeros(n,2)
     #edges = Vector{Vector{Int64}}()
-    labels = String[]
+    labels = Int64[]
     plot_font = "computer modern"
     txtsize = 12
 
@@ -337,11 +338,8 @@ function makePlot(g::Hypergraph)::Plots.Plot{Plots.GRBackend}
     
     for currNode in 1:n
         thisNode = g.nodes[currNode]
-        # NOTE: we use the index of the node to identify it
-        
-        if (!allZeroes) || (thisNode.xCoord != 0) || (thisNode.yCoord != 0)
-            allZeroes = false
-        end
+        if thisNode.size == 0 continue  end
+        if (!allZeroes) || (thisNode.xCoord != 0) || (thisNode.yCoord != 0)  allZeroes = false end
         xy[currNode,:] = [thisNode.xCoord, thisNode.yCoord]
         push!(labels, thisNode.label)
     end
@@ -362,18 +360,22 @@ function makePlot(g::Hypergraph)::Plots.Plot{Plots.GRBackend}
             if currEdge.edgeLabelX == Inf && currEdge.edgeLabelY == Inf 
                 xCenter::Float64 = 0.0
                 yCenter::Float64 = 0.0
+                len = 0
                 for node in currEdge.members
+                    if node.size == 0 continue end
                     xCenter += node.xCoord
                     yCenter += node.yCoord
+                    len += 1
                 end
-                xCenter /= length(currEdge.members)
-                yCenter /= length(currEdge.members)
+                xCenter /= len
+                yCenter /= len
                 currEdge.edgeLabelX = xCenter
                 currEdge.edgeLabelY = yCenter
             end
             #println("$(currEdge.label) $(currEdge.edgeLabelX) $(currEdge.edgeLabelY)")
 
             for node in currEdge.members
+                if node.size == 0 continue end
                 plot!(graphPlot,[currEdge.edgeLabelX; node.xCoord], [currEdge.edgeLabelY; node.yCoord],color = currEdge.color, linewidth = currEdge.lineWidth)
             end
             
@@ -383,49 +385,54 @@ function makePlot(g::Hypergraph)::Plots.Plot{Plots.GRBackend}
         elseif currEdge.displayType == 3 # clique mode
             for S in 1:length(currEdge.members)-1
                 nodeS = currEdge.members[S]
+                if nodeS.size == 0 continue end
                 for D in S+1:length(currEdge.members)
                     nodeD = currEdge.members[D]
+                    if nodeD.size == 0 continue end
                     plot!(graphPlot,[nodeS.xCoord; nodeD.xCoord], [nodeS.yCoord; nodeD.yCoord],color = currEdge.color, linewidth = currEdge.lineWidth)
                 end
             end
         end
     end
-
-    
     #Plot the xy circles and node labels
     #graphPlot = plot()
     # all nodes are updating if and only if the last node is updating
     for currNode in g.nodes
+        if currNode.size == 0 continue end
         scatter!(graphPlot, [currNode.xCoord], [currNode.yCoord] ,markershape = :circle ,  markersize = currNode.size, color = currNode.fillColor , markerstrokecolor = currNode.outlineColor,ma=1.0)
         if (g.showLabels == true)
             annotate!(graphPlot, currNode.xCoord, currNode.yCoord, text(currNode.label, plot_font, txtsize, color=currNode.labelColor))
-        end
-        
+        end 
     end
-    
-
     return graphPlot
 end
 
+function updateNextInt(g::Hypergraph, maybe::Int64 = 9223372036854775807 )::Int64
+    if maybe < g.nextInt return maybe end
+    n = length(g.nodes)
+    for node in 1:n
+        if g.nodes[node].size == 0 return node end
+    end
+    return n+1
+end
+function getNextInt(g::Hypergraph, maybe::Int64 = 9223372036854775807 )::Int64
+    ret = g.nextInt
+    updateNextInt(g,maybe)
+    return ret
+end
 
 """
 Adds a new Node object to the graph from the provided parameters
 """
-function addNode(g::Hypergraph, label::String, size=10, outlineColor="black", fillColor="white", labelColor="black", xCoord=0., yCoord=0.) 
+function addNode(g::Hypergraph, label = -1, size=10, outlineColor="black", fillColor="white", labelColor="black", xCoord=0., yCoord=0.)
+    if label == -1 label = g.nextInt end
+    if label <= length(g.nodes)
+        setNode(g.nodes[label],label, size, outlineColor, fillColor, labelColor, xCoord, yCoord)
+        return g.nodes[label]
+    end
     newNode = Node(label, size, outlineColor, fillColor, labelColor, xCoord, yCoord)
-    badNodeLabel = false
-    i = 0
-    while (newNode.label == "") || doesNodeLabelExist(g,newNode.label)
-        i = i+1 
-        newNode.label = string(i)
-        badNodeLabel = true
-    end
-
-    # Check if a node with the same label is already in the graph
-    if (badNodeLabel)
-        printyellow("Provided node label \"$label\" is empty or already exists in the graph. The node was given the label $(newNode.label)\n")
-    end
     push!(g.nodes, newNode)
+    g.nextInt = updateNextInt(g)
     return newNode
 end
 
@@ -459,45 +466,31 @@ end
 
 function removeNode(g::Hypergraph, label::String)
     # Iterate through all the nodes in the graph and modify appropriately
-    i = 1
-    deleteIndex = -1
-    for node in g.nodes
-            if node.label == label
-                deleteIndex = i
-                break
-            end
-            i+=1  
-    end
-    
-    if (deleteIndex == -1)
-        printred("A node with label $label was not found.\n")
+    nodeIndex = parse(Int64, label)
+    if nodeIndex > length(g.nodes)
+        printyellow("No node with label $label.\n")
         return
-    else
-        deleteat!(g.nodes, i)
     end
+    g.nodes[nodeIndex].size = 0
+    g.nextInt = updateNextInt(g,nodeIndex)    
 
 
     # Iterate through all of the edges in the graph and modify appropriately
     deleteEdges = [] 
-    j = 1
-    for edge in g.edges
-
-        i = 1
+  
+    for edgeNum in 1:length(g.edges)
         deleteIndex = -1
-        
-        for node in edge.members
-            if node.label == label
-                deleteIndex = i
+        for nodeNum in 1:length(g.edges[edgeNum].members)
+            if g.edges[edgeNum].members[nodeNum].label == nodeIndex
+                deleteIndex = nodeNum
                 break
             end
-            i+=1  
         end
-        if (deleteIndex != -1) deleteat!(edge.members, i) end
-        if length(edge.members) == 0 pushfirst!(deleteEdges,j) end
-       j+=1
+        if (deleteIndex != -1) deleteat!(edge.members, deleteIndex) end
+        if length(edge.members) == 0 pushfirst!(deleteEdges,edgeNum) end # adds them to front to evaluate backwards
     end
 
-    #delete all singleton edges
+    #delete all empty edges
     for edgeNo in deleteEdges
         deleteat!(g.edges, edgeNo)
     end
@@ -530,6 +523,12 @@ function addEdge(g::Hypergraph, label::String, mems = Node[],color = RGB{Float64
     return newEdge
 end
 function removeNodeFromEdge(g::Hypergraph, nodelabel::String, edgeLabel::String)
+    nodeIndex = parse(Int64, nodelabel)
+    if nodeIndex > length(g.nodes)
+        printyellow("No node with label $label.\n")
+        return
+    end
+
     if contains(edgeLabel,'[')
         maybeedge = edgeFromMembers(g,edgeLabel,false)
         if maybeedge != false
@@ -539,34 +538,30 @@ function removeNodeFromEdge(g::Hypergraph, nodelabel::String, edgeLabel::String)
             return
         end
     end
-    i = 1
     removeEdgeIndex = -1
-    for edge in g.edges
-        if edge.label == edgeLabel
-            removeEdgeIndex = i
+    for edgeNum in 1:length(g.edges)
+        if g.edges[edgeNum].label == edgeLabel
+            removeEdgeIndex = edgeNum
             break
         end
-        i+=1
     end
 
     if removeEdgeIndex == -1
-        printyellow("Provided edge label \"$edgeLabel\"  does not exist in the graph. No edges deleted.\n")
+        printyellow("Provided edge label \"$edgeLabel\"  does not exist in the graph. No nodes removed from.\n")
         return
     end
 
 
-    i = 1
     deleteNodeIndex = -1
-    for node in g.edges[removeEdgeIndex].members
-        if node.label == nodelabel
+    for nodeNum in 1:length(g.edges[removeEdgeIndex].members)
+        if g.edges[removeEdgeIndex].members[nodeNum].label == nodeIndex
             deleteNodeIndex = i
             break
-        end
-        i+=1  
+        end  
     end
 
     if deleteNodeIndex == -1
-        printyellow("Provided node label \"$nodelabel\"  does not exist in the graph. No edges deleted.\n")
+        printyellow("Provided node label \"$nodelabel\"  does not exist in the graph. No nodes removed from edges.\n")
         return
     end
 
@@ -644,50 +639,36 @@ function simpleAddNodetoEdge(g::Hypergraph,nodeLabel::String,edgeLabel::String)
 
     #check if node and edge exist
     #if either doesn't exist, then create it
-
-    #does the node exist
-    nodeIndex = 0
-    for nodeNum in 1:length(g.nodes)
-        if g.nodes[nodeNum].label == nodeLabel
-            nodeIndex = nodeNum
-            break
+    nodeNum = parse(Int64,nodeLabel)
+    if nodeNum > length(g.nodes) && nodeNum >= g.nextInt #are we trying create a node
+        if nodeNum != g.nextInt
+            printyellow("Node $nodeLabel is not already within the graph. Creating node $(g.nextInt) instead.\n")
         end
+        nodeNum = g.nextInt
+        addNode(g,nodeNum)
     end
 
 
-    if nodeIndex == 0
-        printyellow("No node with label $nodeLabel found in the graph\nMaking a new Node with label $nodeLabel\n")
-        nodeIndex = length(g.nodes)+1
-        addNode(g,nodeLabel)
-    end
     #does edge exist
     for edge in g.edges
-        if edge.label == edgeLabel
-            push!(edge.members, g.nodes[nodeIndex])
-            return
-        end
-    end
-
-    #try uppercase
-    for edge in g.edges
-        if edge.label == uppercase(edgeLabel)
-            push!(edge.members, g.nodes[nodeIndex])
+        if edge.label == edgeLabel || edge.label == uppercase(edgeLabel)
+            push!(edge.members, g.nodes[nodeNum])
             return
         end
     end
 
     #try edge parsing
     maybeEdge = edgeFromMembers(g,edgeLabel)
-    #print(maybeEdge)
     if maybeEdge != false 
-        push!(maybeEdge.members, g.nodes[nodeIndex]) 
+        push!(maybeEdge.members, g.nodes[nodeNum]) 
         return 
     end
 
     #edge does not exist then add it
     addEdge(g,edgeLabel)
-    push!(g.edges[end].members, g.nodes[nodeIndex])
+    push!(g.edges[end].members, g.nodes[nodeNum])
 end
+
 
 #Layout
 function getTotalDegrees(g::Hypergraph)::Matrix{Float64}
@@ -900,8 +881,6 @@ function forceDirectedCoords(g::Hypergraph, ε::Float64, K::Int64, kRep::Float64
     end
 end
 
-
-
 # The following functions enable spectral layout
 
 # The following function will create a sparse matrix representing the graph
@@ -1004,16 +983,11 @@ function loadnodes(g::Hypergraph,filepath::String)
     if numNodes == 0
         for i in 1:numLines
             coords = [parse(Float64,j) for j in split(lines[i],",")]
-            newNode = Node(xCoord=coords[1],yCoord=coords[2])
-            badNodeLabel = false
-            i = 0
-            while (newNode.label == "") || doesNodeLabelExist(g,newNode.label)
-                i = i+1 
-                newNode.label = string(i)
-                badNodeLabel = true
-            end
+            newNode = Node(label=i,xCoord=coords[1],yCoord=coords[2])
+
             push!(g.nodes,newNode)
         end
+        g.nextInt = numLines+1
     else
         for nodeNum in 1:numNodes
             g.nodes[nodeNum].xCoord,g.nodes[nodeNum].yCoord = [parse(Float64,j) for j in split(lines[nodeNum],",")]
@@ -1050,12 +1024,11 @@ function loadedges(g::Hypergraph,filepath::String)
             newEdge.color = cp[i]
         end
         #looks for nodes by label (node is actually a node label here)
-        for nodeLabel in [string(i) for i in split(edge,",")]
-            maybeNode = findNodeWithLabel(g,nodeLabel)
-            if maybeNode == false
-                push!(newEdge.members,addNode(g,nodeLabel))
+        for nodeNum in [parse(Int64,i) for i in split(edge,",")]
+            if nodeNum > length(g.edges)
+                push!(newEdge.members,addNode(g,nodeNum))
             else
-                push!(newEdge.members,maybeNode)
+                push!(newEdge.members,g.nodes[nodeNum])
             end
         end
         push!(g.edges,newEdge)
@@ -1083,26 +1056,19 @@ function loadnodesmeta(g::Hypergraph,filepath::String)
         for i in 1:numLines
             #$(node.label) $(node.size) $(node.outlineColor) $(node.fillColor) $(node.labelColor)"
             lineArgs = ssplit(lines[i])
-            nodeSize = parse(Int64,lineArgs[2])
-            newNode = Node(label=lineArgs[1], size=nodeSize, outlineColor=lineArgs[3], fillColor=lineArgs[4], labelColor=lineArgs[5])
-            badNodeLabel = false
-            i = 0
-            while (newNode.label == "") || doesNodeLabelExist(g,newNode.label)
-                i = i+1 
-                newNode.label = string(i)
-                badNodeLabel = true
-            end
+            nodeSize = parse(Int64,lineArgs[1])
+            newNode = Node(label=i,size=nodeSize, outlineColor=lineArgs[2], fillColor=lineArgs[3], labelColor=lineArgs[4])
             push!(g.nodes,newNode)
         end
     else
         for nodeNum in 1:numNodes
             lineArgs = ssplit(lines[nodeNum])
             nodeSize = parse(Int64,lineArgs[2])
-            g.nodes[nodeNum].label = lineArgs[1]
+            g.nodes[nodeNum].label = i
             g.nodes[nodeNum].size = nodeSize
-            g.nodes[nodeNum].outlineColor=lineArgs[3]
-            g.nodes[nodeNum].fillColor=lineArgs[4]
-            g.nodes[nodeNum].labelColor=lineArgs[5]
+            g.nodes[nodeNum].outlineColor=lineArgs[2]
+            g.nodes[nodeNum].fillColor=lineArgs[3]
+            g.nodes[nodeNum].labelColor=lineArgs[4]
         end
 
     end
@@ -1232,8 +1198,8 @@ function loadAll(g::Hypergraph, edgefilepath::String, nodefilepath::String, edge
      for i in 1:numNodeLines
         coords = [parse(Float64,j) for j in split(nodeLines[i],",")]
         lineArgs = ssplit(nodeMetaLines[i])
-        nodeSize = parse(Int64,lineArgs[2])
-        newNode = Node(xCoord=coords[1],yCoord=coords[2],label=lineArgs[1], size=nodeSize, outlineColor=lineArgs[3], fillColor=lineArgs[4], labelColor=lineArgs[5])
+        nodeSize = parse(Int64,lineArgs[1])
+        newNode = Node(xCoord=coords[1],yCoord=coords[2],label=i, size=nodeSize, outlineColor=lineArgs[2], fillColor=lineArgs[3], labelColor=lineArgs[4])
         push!(g.nodes,newNode)
         #looks for nodes by label (node is actually a node label here)
        
@@ -1266,7 +1232,7 @@ function loadAll(g::Hypergraph, edgefilepath::String, nodefilepath::String, edge
     for i in 1:numNodeLines
         newNode = g.nodes[i]
         for edgeNum in 1:numEdgeLines
-            if newNode.label in ssplit(edgeLines[edgeNum],",") push!(g.edges[edgeNum].members,newNode) end
+            if newNode.label in [parse(Int64, i) for i in ssplit(edgeLines[edgeNum],",")] push!(g.edges[edgeNum].members,newNode) end
         end
     end
    
@@ -1403,7 +1369,7 @@ function outputGraphToTxt(g::Hypergraph, filename::String)
     open(filename*"-ndm.txt", "w") do file
         writeString = ""
         for node in g.nodes
-            nodeMeta = "$(node.label) $(node.size) $(node.outlineColor) $(node.fillColor) $(node.labelColor)"
+            nodeMeta = "$(node.size) $(node.outlineColor) $(node.fillColor) $(node.labelColor)"
             writeString *= nodeMeta*"\n"
         end
         write(file,writeString[begin:end-1])

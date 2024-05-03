@@ -1,5 +1,5 @@
 mutable struct Node
-    label::String # How the node will actually appear on the graph #labels should be unique
+    label::Int64 # How the node will actually appear on the graph #labels should be unique
     size::Int64 # How big the node will appear on the graph
     
     outlineColor::String 
@@ -8,31 +8,33 @@ mutable struct Node
 
     xCoord::Float64
     yCoord::Float64
-    Node() = new("",10,"black","white","black")
-    Node(label="", size=10, outlineColor="black", fillColor="white", labelColor="black", xCoord=0., yCoord=0.) = new(label,  size, outlineColor, fillColor, labelColor, xCoord, yCoord)
-    Node(;label="", size=10, outlineColor="black", fillColor="white", labelColor="black", xCoord=0., yCoord=0.) = new(label, size, outlineColor, fillColor, labelColor, xCoord, yCoord)
+    Node() = new(0,10,"black","white","black")
+    Node(label=0, size=10, outlineColor="black", fillColor="white", labelColor="black", xCoord=0., yCoord=0.) = new(label,  size, outlineColor, fillColor, labelColor, xCoord, yCoord)
+    Node(;label=0, size=10, outlineColor="black", fillColor="white", labelColor="black", xCoord=0., yCoord=0.) = new(label, size, outlineColor, fillColor, labelColor, xCoord, yCoord)
     Node(n::Node) = new(n.label, n.size, n.outlineColor, n.fillColor, n.labelColor, n.xCoord, n.yCoord)
 end
-function updateNodeColor(n::Node, fc::String, oc::String, lc::String)
-    if (fc != "")
-        n.fillColor = fc
-    end
-
-    if (oc != "")
-        n.outlineColor = oc
-    end
+function updateNodeColor(n::Node, fc::String, oc::String)
+    if (fc != "")  n.fillColor = fc end
+    if (oc != "") n.outlineColor = oc end
 end
 
 function updateNodeLabelColor(n::Node, lc::String)
-    if (lc != "")
-        n.labelColor = lc
-    end
+    if (lc != "") n.labelColor = lc end
 end
 
+function setNode(node::Node ,label = -1, size=10, outlineColor="black", fillColor="white", labelColor="black", xCoord=0., yCoord=0.)
+node.label = label
+node.size = size
+node.outlineColor = outlineColor
+node.fillColor = fillColor
+node.labelColor = labelColor
+node.xCoord = xCoord
+node.yCoord = yCoord
+end
 
 # Parses a node based on vac file commands
 function parseNode(lineArgs::Vector{String})::Node
-    label = ""
+    label = 0
     size = 10
     outlineColor = "black"
     fillColor = "white"
@@ -42,7 +44,7 @@ function parseNode(lineArgs::Vector{String})::Node
 
     i = findIndex(lineArgs, "-l")
     if i != -1
-        label = lineArgs[i+1]
+        label = parse(Int64,lineArgs[i+1])
     end
     i = findIndex(lineArgs, "-x")
     if i != -1

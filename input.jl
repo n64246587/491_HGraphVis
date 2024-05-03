@@ -74,21 +74,17 @@ function promptLoop()
 
             elseif commands[1] in addAliases
                 if commands[2] == "node"
-                    if commandParts == 6 && commands[5] == "edge"
+                    if commandParts == 6 && commands[4] == "edge" # add node `nodelabel` to edge 'edgelabel'
                         simpleAddNodetoEdge(G,commands[3],commands[6])
                     elseif commandParts == 2 # add node
-                        nodetoadd = addNode(G, commands)
-                    elseif commands[3] != "" # add node somethhing
-                        nodetoadd = addNode(G, commands[3])
-                    else
-                        nodetoadd = addNode(G, commands)
+                        nodetoadd = addNode(G)
                     end
                     
                 end
                 
             elseif commands[1] in removeAliases
                 if commands[2] == "node"
-                    if commandParts == 3 removeNode(G,commands[3])
+                    if commandParts == 3 removeNode(G,commands[3]) #remove node `nodelabel`
                     elseif commandParts == 6 removeNodeFromEdge(G,commands[3],commands[6])#remove node [node] from edge [edge]
                     end
                 elseif commands[2] == "edge"
@@ -100,7 +96,13 @@ function promptLoop()
                 moveCoord = 2
                 if "node" == commands[2] moveCoord = 3 end
                 label = String(commands[moveCoord])
-                nodeToMove = findNodeWithLabel(G, label)
+                nodeCoord = parse(Int64,commands[moveCoord])
+                nodeToMove = 0
+                if nodeCoord > length(G.nodes)
+                    nodeToMove = false
+                else
+                    nodeToMove = G.nodes[nodeCoord]
+                end
                 edgeToMove = findEdgeWithLabel(G, label)
                 if nodeToMove != false
                     if "to" == commands[moveCoord+1]
@@ -263,7 +265,7 @@ function promptLoop()
             elseif commands[1] in nodeSizeAliases 
                 if commandParts == 2 setAllNodeSize(G, parse(Float64, commands[2])) 
                 elseif commandParts == 3 
-                    node = findNodeWithLabel(G, commands[2])
+                    node = G.nodes[parse(Int64,commands[2])]
                     node.size = parse(Float64, commands[3])
                 end
             
@@ -288,7 +290,7 @@ function promptLoop()
                     # nodeToColor = findNodeWithLabel(G, commands[3])
                     # nodeToColor.fillColor = colorString
                     ind = findNodeIndexfromLabel(G,commands[3])
-                    if (ind != -1) updateNodeColor(G.nodes[ind], colorString, colorString, "") end
+                    if (ind != -1) updateNodeColor(G.nodes[ind], colorString, colorString) end
 
                 elseif commands[2] in edgeAliases
                     
@@ -315,9 +317,20 @@ function promptLoop()
                 elseif n2 == -1 
                     printyellow("Node with label $(commands[3]) could not be found.\n")
                 else
-                    swapnodes(G,G.nodes[n1],G.nodes[n2])
+                    swapnodes(G.nodes[n1],G.nodes[n2])
                 end
-
+            elseif commands[1] in clearAliases
+                if commandParts == 2 && commands[2] == "YES"
+                    emptyGraph!(G)
+                else
+                    printyellow("ARE YOU SURE YOU WOULD LIKE TO DELETE THIS GRAPH? REPLY WITH YES TO CONFIRM: ")
+                    if strip(readline()) == "YES"
+                        emptyGraph!(G)
+                        printyellow("Graph Cleared.\n")
+                    else
+                        printyellow("Aborted.\n")
+                    end
+                end
             elseif commands[1] in saveAliases
                 genericSave(commands[2])
 
@@ -357,5 +370,8 @@ displayGraph()
 printstyled("Finished loading packages.\nWelcome to the Interactive Hypergraph Visualizer.\n",color=:green)
 promptLoop() 
 intendedExit = true
+#TODO leaves a window behind until that repl is Exited
+#maybe fork and exec vp could work
+if isinteractive() run(`julia.exe`) end
 exit(0)
 

@@ -71,6 +71,7 @@ function circlepoints(centerX,centerY,radius,pts = 100)
     # Output: a convex hull object that defines the hyperedge
         p = Vector{Vector{Float64}}()
         for node in edge.members
+            if node.size == 0 continue end
             append!(p, circlepoints(node.xCoord, node.yCoord ,r))
         end 
         H = convex_hull(p)
