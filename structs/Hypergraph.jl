@@ -1105,7 +1105,7 @@ function loadedgesmeta(g::Hypergraph,filepath::String)
             newEdge.displayType = parse(Int64,lArgs[4])
             newEdge.hullSize = parse(Float64,lArgs[5])
             newEdge.edgeLabelX = parse(Float64,lArgs[6])
-            newEdge.edgeLabelX = parse(Float64,lArgs[7])
+            newEdge.edgeLabelY = parse(Float64,lArgs[7])
             newEdge.fill = parse(Float64,lArgs[8])
             push!(g.edges,newEdge)
             #edgeColor = "$(edge.color.r),$(edge.color.g),$(edge.color.b)"
@@ -1247,9 +1247,10 @@ end
 
 function parseEdgeExpression(g::Hypergraph,nodeLabels::String)::Edge
     edg = Edge()
+    n = length(g.nodes)
     for nodeLabel in ssplit(nodeLabels,",")
-        maybenode = findNodeWithLabel(g,nodeLabel)
-        if maybenode != false push!(edg.members,maybenode) end
+        nodeNum = parse(Int64,nodeLabel)
+        if nodeNum <= n push!(edg.members,g.nodes[nodeNum]) end
     end
     return edg
 end
